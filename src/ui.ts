@@ -50,7 +50,6 @@ const copy = {
     "viewer-label": "Local browser and handoff guide<small>Review the package without special tools and explain it to developers and agents.</small>",
     "rest-label": "Figma REST V1 structure<small>Complete but usually redundant. Recommended only for full archives.</small>",
     export: "Export handoff package",
-    "receipt-title": "Handoff package ready",
     loading: "Reading selection…",
     emptySelectionTitle: "Select one or more design nodes",
     emptyPageTitle: "Nothing exportable on this Page",
@@ -58,8 +57,14 @@ const copy = {
     invalidSelectionReason: "The selection contains a node that Figma cannot export.",
     emptyPageReason: "This Page has no visible top-level design content.",
     preparing: "Preparing export…",
+    exportingTitle: "Building your handoff package",
+    completeTitle: "Handoff package download started",
+    errorTitle: "Export did not finish",
     compressing: "Compressing handoff package…",
     downloadStarted: "Download started",
+    downloadHint: "Find it in Downloads or your browser's chosen download location. If a save dialog appeared, use the folder you selected.",
+    downloadAgain: "Download again",
+    done: "Done",
     zipFailed: "ZIP creation failed",
   },
   zh: {
@@ -86,7 +91,6 @@ const copy = {
     "viewer-label": "本地浏览页与交付说明<small>无需安装工具即可查看页面清单，并告诉开发者或 AI 如何使用包内文件。</small>",
     "rest-label": "Figma REST V1 原始结构<small>信息完整但通常与坐标索引重复，默认仅用于完整归档。</small>",
     export: "导出交付包",
-    "receipt-title": "交付包已生成",
     loading: "正在读取选择…",
     emptySelectionTitle: "请选择一个或多个设计节点",
     emptyPageTitle: "当前 Page 无可导出内容",
@@ -94,8 +98,14 @@ const copy = {
     invalidSelectionReason: "当前选择中包含 Figma 无法导出的节点。",
     emptyPageReason: "当前 Page 没有可见的顶层设计内容。",
     preparing: "准备导出…",
+    exportingTitle: "正在生成交付包",
+    completeTitle: "交付包已开始下载",
+    errorTitle: "导出未完成",
     compressing: "正在压缩交付包…",
     downloadStarted: "下载已开始",
+    downloadHint: "请到系统“下载”文件夹或浏览器设置的下载位置查找；如果刚才出现保存窗口，则以你选择的位置为准。",
+    downloadAgain: "再次下载",
+    done: "完成",
     zipFailed: "ZIP 生成失败",
   },
 } as const;
@@ -106,12 +116,16 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 const selectionName = document.querySelector<HTMLDivElement>("#selection-name")!;
 const selectionMeta = document.querySelector<HTMLDivElement>("#selection-meta")!;
 const exportButton = document.querySelector<HTMLButtonElement>("#export")!;
-const progress = document.querySelector<HTMLDivElement>("#progress")!;
+const exportOverlay = document.querySelector<HTMLDivElement>("#export-overlay")!;
+const exportDialogTitle = document.querySelector<HTMLElement>("#export-dialog-title")!;
 const progressBar = document.querySelector<HTMLDivElement>("#bar")!;
 const status = document.querySelector<HTMLDivElement>("#status")!;
-const receipt = document.querySelector<HTMLDivElement>("#receipt")!;
-const receiptCopy = document.querySelector<HTMLSpanElement>("#receipt-copy")!;
+const downloadFilename = document.querySelector<HTMLSpanElement>("#download-filename")!;
+const downloadHint = document.querySelector<HTMLSpanElement>("#download-hint")!;
+const downloadAgain = document.querySelector<HTMLButtonElement>("#download-again")!;
+const dialogClose = document.querySelector<HTMLButtonElement>("#dialog-close")!;
 const files: Record<string, Uint8Array> = {};
+let lastDownload: { url: string; filename: string } | null = null;
 let locale: Locale = navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
 let initialized = false;
 let currentPreset: Preset = "developer";
@@ -179,6 +193,9 @@ function applyLocale(next: Locale, persist = false): void {
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
+  downloadHint.textContent = t("downloadHint");
+  downloadAgain.textContent = t("downloadAgain");
+  dialogClose.textContent = t("done");
   renderScope();
   if (persist) parent.postMessage({ pluginMessage: { type: "set-locale", locale } }, "*");
 }
@@ -220,12 +237,42 @@ document.querySelectorAll<HTMLInputElement>('input[name="scope"]').forEach((inpu
 
 function updateScopes(selection: ScopeSummary, page: ScopeSummary): void {
   latestScopes = { selection, page };
-  if (!latestScopes.selection.valid && latestScopes.page.valid) {
-    currentScope = "page";
-    const pageInput = document.querySelector<HTMLInputElement>('input[name="scope"][value="page"]');
-    if (pageInput) pageInput.checked = true;
-  }
   renderScope();
+}
+
+function selectScope(scope: ScopeMode): void {
+  currentScope = scope;
+  const input = document.querySelector<HTMLInputElement>(`input[name="scope"][value="${scope}"]`);
+  if (input) input.checked = true;
+  renderScope();
+}
+
+function showExportDialog(): void {
+  exportOverlay.className = "export-overlay visible";
+  exportOverlay.setAttribute("aria-hidden", "false");
+  exportDialogTitle.textContent = t("exportingTitle");
+  app.inert = true;
+}
+
+function finishExportDialog(state: "complete" | "failed", title: string): void {
+  exportOverlay.classList.add(state);
+  exportDialogTitle.textContent = title;
+  dialogClose.focus();
+}
+
+function closeExportDialog(): void {
+  dialogClose.blur();
+  exportOverlay.className = "export-overlay";
+  exportOverlay.setAttribute("aria-hidden", "true");
+  app.inert = false;
+  exportButton.focus();
+}
+
+function triggerDownload(download: { url: string; filename: string }): void {
+  const anchor = document.createElement("a");
+  anchor.href = download.url;
+  anchor.download = download.filename;
+  anchor.click();
 }
 
 function setStatus(message: string, error = false): void {
@@ -241,8 +288,7 @@ function formatBytes(bytes: number): string {
 
 exportButton.addEventListener("click", () => {
   exportButton.disabled = true;
-  progress.style.display = "block";
-  receipt.style.display = "none";
+  showExportDialog();
   progressBar.style.width = "0%";
   setStatus(t("preparing"));
   for (const key of Object.keys(files)) delete files[key];
@@ -271,6 +317,7 @@ window.onmessage = (event: MessageEvent<{ pluginMessage: PluginMessage }>) => {
 
   if (message.type === "initialize") {
     updateScopes(message.selection, message.page);
+    selectScope(message.selection.valid ? "selection" : "page");
     applyLocale(message.locale ?? locale);
     reveal();
     return;
@@ -278,6 +325,7 @@ window.onmessage = (event: MessageEvent<{ pluginMessage: PluginMessage }>) => {
 
   if (message.type === "selection") {
     updateScopes(message.selection, message.page);
+    selectScope(message.selection.valid ? "selection" : "page");
     if (!initialized) {
       applyLocale(locale);
       reveal();
@@ -309,19 +357,19 @@ window.onmessage = (event: MessageEvent<{ pluginMessage: PluginMessage }>) => {
       const archive = zipSync(files, { level: 6 });
       const blob = new Blob([archive], { type: "application/zip" });
       const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = message.filename;
-      anchor.click();
-      setTimeout(() => URL.revokeObjectURL(url), 5_000);
+      if (lastDownload) URL.revokeObjectURL(lastDownload.url);
+      lastDownload = { url, filename: message.filename };
+      triggerDownload(lastDownload);
       progressBar.style.width = "100%";
-      setStatus(t("downloadStarted"));
-      receipt.style.display = "block";
-      receiptCopy.textContent = locale === "zh"
+      setStatus(locale === "zh"
         ? `${message.receipt.screens} 个页面、${message.receipt.components} 个组件、${message.receipt.images} 张原图 · ${Object.keys(files).length} 个文件 · ${formatBytes(archive.byteLength)}`
-        : `${message.receipt.screens} screens, ${message.receipt.components} components, ${message.receipt.images} original images · ${Object.keys(files).length} files · ${formatBytes(archive.byteLength)}`;
+        : `${message.receipt.screens} screens, ${message.receipt.components} components, ${message.receipt.images} original images · ${Object.keys(files).length} files · ${formatBytes(archive.byteLength)}`);
+      downloadFilename.textContent = message.filename;
+      downloadHint.textContent = t("downloadHint");
+      finishExportDialog("complete", t("completeTitle"));
     } catch (error) {
       setStatus(`${t("zipFailed")}: ${error instanceof Error ? error.message : String(error)}`, true);
+      finishExportDialog("failed", t("errorTitle"));
     } finally {
       exportButton.disabled = false;
     }
@@ -331,8 +379,15 @@ window.onmessage = (event: MessageEvent<{ pluginMessage: PluginMessage }>) => {
   if (message.type === "export-error") {
     setStatus(message.message, true);
     exportButton.disabled = false;
+    finishExportDialog("failed", t("errorTitle"));
   }
 };
+
+downloadAgain.addEventListener("click", () => {
+  if (lastDownload) triggerDownload(lastDownload);
+});
+
+dialogClose.addEventListener("click", closeExportDialog);
 
 // The main sandbox normally initializes immediately. This fallback keeps the
 // standalone UI preview useful without exposing a half-translated interface.

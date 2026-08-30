@@ -100,17 +100,43 @@
       }
       .actions > button:hover:not(:disabled) { background: var(--figma-color-bg-brand-hover, #0c8ce9); }
       .actions > button:disabled { opacity: .42; cursor: default; }
-      .progress { margin-top: 11px; display: none; }
-      .track { height: 3px; overflow: hidden; border-radius: 99px; background: var(--figma-color-bg-tertiary, #ebebeb); }
-      .bar { width: 0; height: 100%; border-radius: inherit; background: var(--figma-color-bg-brand, #0d99ff); transition: width .16s ease; }
-      .status { min-height: 17px; margin-top: 7px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 10.5px; line-height: 1.4; }
-      .error { color: var(--figma-color-text-danger, #f24822); }
-      .receipt {
-        display: none; margin-top: 10px; padding: 10px 11px; border: 1px solid var(--figma-color-border, #e5e5e5);
-        border-radius: 8px; background: var(--figma-color-bg-secondary, #f7f7f7);
+      .export-overlay {
+        position: fixed; inset: 0; z-index: 20; display: none; place-items: center; padding: 20px;
+        background: color-mix(in srgb, var(--figma-color-bg, #fff) 78%, transparent);
+        backdrop-filter: blur(5px);
       }
-      .receipt strong { display: block; margin-bottom: 3px; font-size: 11px; }
-      .receipt span { color: var(--figma-color-text-secondary, #6b6b6b); font-size: 10px; line-height: 1.4; }
+      .export-overlay.visible { display: grid; }
+      .export-dialog {
+        width: min(100%, 340px); padding: 20px; border: 1px solid var(--figma-color-border, #e5e5e5);
+        border-radius: 13px; background: var(--figma-color-bg, #fff); box-shadow: 0 14px 40px #00000024;
+      }
+      .export-symbol {
+        display: grid; place-items: center; width: 38px; height: 38px; margin-bottom: 13px;
+        border-radius: 11px; color: var(--figma-color-icon-brand, #0d99ff);
+        background: var(--figma-color-bg-selected-secondary, #edf7ff);
+      }
+      .spinner { width: 17px; height: 17px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .75s linear infinite; }
+      .success-mark, .error-mark { display: none; width: 20px; height: 20px; }
+      .export-overlay.complete .spinner, .export-overlay.failed .spinner { display: none; }
+      .export-overlay.complete .success-mark, .export-overlay.failed .error-mark { display: block; }
+      .export-overlay.complete .export-symbol { color: var(--figma-color-icon-success, #0b7a3e); background: var(--figma-color-bg-success-tertiary, #e8f5ec); }
+      .export-overlay.failed .export-symbol { color: var(--figma-color-icon-danger, #f24822); background: var(--figma-color-bg-danger-tertiary, #fff0ed); }
+      .export-dialog strong { display: block; font-size: 14px; line-height: 1.4; }
+      .track { height: 4px; margin-top: 15px; overflow: hidden; border-radius: 99px; background: var(--figma-color-bg-tertiary, #ebebeb); }
+      .bar { width: 0; height: 100%; border-radius: inherit; background: var(--figma-color-bg-brand, #0d99ff); transition: width .16s ease; }
+      .status { min-height: 17px; margin-top: 9px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 10.5px; line-height: 1.45; }
+      .error { color: var(--figma-color-text-danger, #f24822); }
+      .download-info { display: none; margin-top: 14px; padding: 10px 11px; border-radius: 8px; background: var(--figma-color-bg-secondary, #f7f7f7); }
+      .export-overlay.complete .download-info { display: block; }
+      .download-filename { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; font-weight: 600; }
+      .download-hint { display: block; margin-top: 5px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 9.5px; line-height: 1.45; }
+      .dialog-actions { display: none; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+      .export-overlay.complete .dialog-actions, .export-overlay.failed .dialog-actions { display: grid; }
+      .dialog-button { height: 34px; border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 6px; background: var(--figma-color-bg, #fff); color: var(--figma-color-text, #1e1e1e); font-size: 10.5px; font-weight: 600; cursor: pointer; }
+      .dialog-button.primary { border-color: transparent; background: var(--figma-color-bg-brand, #0d99ff); color: var(--figma-color-text-onbrand, #fff); }
+      .export-overlay.failed #download-again { display: none; }
+      .export-overlay.failed .dialog-actions { grid-template-columns: 1fr; }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
@@ -184,12 +210,27 @@
 
     <div class="actions">
       <button id="export" disabled>Export handoff package</button>
-      <div id="progress" class="progress">
-        <div class="track"><div id="bar" class="bar"></div></div>
-        <div id="status" class="status"></div>
-      </div>
-      <div id="receipt" class="receipt"><strong id="receipt-title">Handoff package ready</strong><span id="receipt-copy"></span></div>
     </div>
+    </div>
+    <div id="export-overlay" class="export-overlay" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title" aria-hidden="true">
+      <div class="export-dialog">
+        <div class="export-symbol" aria-hidden="true">
+          <div class="spinner"></div>
+          <svg class="success-mark" viewBox="0 0 20 20" fill="none"><path d="m4 10.5 3.5 3.5L16 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="error-mark" viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </div>
+        <strong id="export-dialog-title">Preparing export…</strong>
+        <div class="track"><div id="bar" class="bar"></div></div>
+        <div id="status" class="status" aria-live="polite"></div>
+        <div class="download-info">
+          <span id="download-filename" class="download-filename"></span>
+          <span id="download-hint" class="download-hint"></span>
+        </div>
+        <div class="dialog-actions">
+          <button id="download-again" type="button" class="dialog-button">Download again</button>
+          <button id="dialog-close" type="button" class="dialog-button primary">Done</button>
+        </div>
+      </div>
     </div>
     <script>/*__BUNDLED_UI__*/</script>
   </body>
