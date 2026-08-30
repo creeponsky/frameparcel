@@ -14,7 +14,7 @@ Software development
 
 ## Short description
 
-FrameParcel turns one selected design area into a structured ZIP with visual previews, implementation geometry, original images, clean SVGs, and a local browser. Export once, then hand it to a developer, coding agent, archive, or review workflow without repeatedly reconnecting to the source file.
+FrameParcel turns selected Figma designs—or an entire Page—into a structured ZIP with visual previews, implementation geometry, original images, clean SVGs, and a local browser. Export once, then hand it to a developer, coding agent, archive, or review workflow without repeatedly reconnecting to the source file.
 
 ## Full description
 
@@ -29,6 +29,7 @@ Choose what you need:
 
 Built for real handoff work:
 
+- exports a single node, multiple selected nodes, a screen container, or the current Page;
 - separates full screens from small top-level design fragments;
 - preserves original image fills instead of cropping them from screenshots;
 - exports visible icon compositions and deduplicates repeated SVGs;
@@ -44,6 +45,18 @@ FrameParcel packages design context. It does not generate production code, copy 
 
 Export once. Hand off anywhere.
 
+## Support
+
+https://github.com/creeponsky/frameparcel/issues
+
+## Privacy policy
+
+https://github.com/creeponsky/frameparcel/blob/main/PRIVACY.md
+
+## Version 1.0.0 release notes
+
+FrameParcel now exports a single selected node, multiple selected nodes, a multi-screen container, or the entire current Page. This release also includes Light and Dark Mode support, local visual browsing, original image and deduplicated SVG export, implementation geometry, clearer presets, and sandbox coverage for Figma's plugin runtime.
+
 ## Security disclosure notes
 
 - Network access: none
@@ -57,9 +70,8 @@ Export once. Hand off anywhere.
 - [ ] Verify the latest build in Figma Desktop in both Light and Dark Mode
 - [ ] Export all three presets from a real multi-screen selection
 - [ ] Validate the resulting ZIPs with `npm run validate-export`
-- [ ] Confirm icon at 128 × 128
-- [ ] Confirm thumbnail at 1920 × 1080
-- [ ] Add a real support contact in the Figma publishing form
+- [x] Confirm icon at 128 × 128
+- [x] Confirm thumbnail at 1920 × 1080
+- [x] Prepare a real support contact for the Figma publishing form
 - [ ] Confirm two-factor authentication on the publishing account
 - [ ] Review and submit from Figma Desktop
-

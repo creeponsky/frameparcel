@@ -2,7 +2,7 @@
 
 **Export once. Hand off anywhere.**
 
-FrameParcel is a local-only Figma plugin that turns one selected design area into a browsable handoff package for developers and AI coding agents.
+FrameParcel is a local-only Figma plugin that turns selected design areas or an entire Page into a browsable handoff package for developers and AI coding agents.
 
 Screenshots alone lose structure. Raw JSON loses visual context and original assets. FrameParcel keeps both—without an API token, hosted service, analytics, or design upload.
 
@@ -33,6 +33,12 @@ Adds Figma REST V1 JSON to the development package. Use it for debugging, preser
 
 Every item is also available under **Customize** with a plain-language explanation.
 
+## Export scopes
+
+- **Current selection** — export one Frame, Section, Component, Instance, layer, or multiple selected design nodes.
+- **Current Page** — export all visible top-level content on the current Page without first wrapping it in another Frame.
+- **Container handoff** — select one large Frame or Section containing many screens; FrameParcel separates full-size screens from smaller component fragments.
+
 ## Package layout
 
 ```text
@@ -58,13 +64,17 @@ selection-handoff.zip
 
 Local manifest imports require Figma Desktop.
 
+For a published release, download and extract the GitHub source archive, then import `manifest.json` from Figma Desktop's development plugin menu. The compiled `dist/` files are included, so no build step is required.
+
+For development:
+
 ```bash
-npm install
+npm ci
 npm run check
 npm run build
 ```
 
-Then open a Figma Design file and import this repository's `manifest.json` from the development plugin menu. Select exactly one Frame, Section, Component, or exportable design region and run **FrameParcel**.
+Then open a Figma Design file and import this repository's `manifest.json` from the development plugin menu. Select one or more exportable design nodes, or choose **Current Page** inside FrameParcel.
 
 ## Validate a package
 

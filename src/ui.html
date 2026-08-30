@@ -24,8 +24,21 @@
         font-size: 10px; font-weight: 600;
       }
       .subtle { color: var(--figma-color-text-secondary, #6b6b6b); font-size: 11px; line-height: 1.45; }
+      .scope-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin: 14px 0 8px; }
+      .scope-option {
+        display: grid; grid-template-columns: 15px 1fr; gap: 7px; align-items: start;
+        padding: 9px; border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 8px;
+        background: var(--figma-color-bg, #fff); cursor: pointer;
+      }
+      .scope-option:has(input:checked) {
+        border-color: var(--figma-color-border-selected, #0d99ff);
+        background: var(--figma-color-bg-selected-secondary, #edf7ff);
+      }
+      .scope-option input { width: 13px; height: 13px; margin: 2px 0 0; accent-color: var(--figma-color-bg-brand, #0d99ff); }
+      .scope-title { display: block; font-size: 11px; font-weight: 600; line-height: 1.3; }
+      .scope-copy { display: block; margin-top: 2px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 9px; line-height: 1.35; }
       .selection {
-        margin: 14px 0 16px; padding: 12px; border: 1px solid var(--figma-color-border, #e5e5e5);
+        margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--figma-color-border, #e5e5e5);
         border-radius: 8px; background: var(--figma-color-bg-secondary, #f7f7f7);
       }
       .selection-row { display: flex; align-items: center; gap: 10px; }
@@ -90,6 +103,18 @@
         <div id="tagline" class="subtle">Pack design, assets, and implementation context into one inspectable handoff.</div>
       </div>
       <span id="local-only" class="privacy">LOCAL ONLY</span>
+    </div>
+
+    <div id="scope-label" class="section-label" style="margin-top:14px">Export scope</div>
+    <div class="scope-switch">
+      <label class="scope-option">
+        <input type="radio" name="scope" value="selection" checked />
+        <span><span id="scope-selection-title" class="scope-title">Current selection</span><span id="scope-selection-copy" class="scope-copy">One node or multiple selected frames, sections, and components.</span></span>
+      </label>
+      <label class="scope-option">
+        <input type="radio" name="scope" value="page" />
+        <span><span id="scope-page-title" class="scope-title">Current Page</span><span id="scope-page-copy" class="scope-copy">Export visible top-level content without wrapping it in another frame.</span></span>
+      </label>
     </div>
 
     <div class="selection">

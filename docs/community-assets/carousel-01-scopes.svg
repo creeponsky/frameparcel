@@ -1,0 +1,62 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1920" height="1080" fill="#F3F6F9"/>
+  <rect x="88" y="76" width="80" height="80" rx="20" fill="#0D99FF"/>
+  <path d="M111 107V98C111 95.8 112.8 94 115 94H124M143 94H152C154.2 94 156 95.8 156 98V107M156 126V135C156 137.2 154.2 139 152 139H143M124 139H115C112.8 139 111 137.2 111 135V126" stroke="white" stroke-width="5" stroke-linecap="round"/>
+  <path d="M119 112L134 104L149 112V129L134 138L119 129V112Z" fill="white"/>
+  <text x="188" y="132" fill="#14171B" font-family="Inter, Arial, sans-serif" font-size="46" font-weight="750">FrameParcel</text>
+  <text x="88" y="286" fill="#14171B" font-family="Inter, Arial, sans-serif" font-size="82" font-weight="760" letter-spacing="-3">Export the scope you actually mean.</text>
+  <text x="91" y="348" fill="#69727D" font-family="Inter, Arial, sans-serif" font-size="29">One node, multiple selections, a screen container, or the current Page.</text>
+
+  <g transform="translate(88 438)">
+    <rect width="410" height="430" rx="28" fill="white" stroke="#D8DFE7" stroke-width="2"/>
+    <rect x="28" y="28" width="48" height="48" rx="12" fill="#E6F4FF"/>
+    <path d="M41 44H63M41 52H57M41 60H50" stroke="#0D99FF" stroke-width="4" stroke-linecap="round"/>
+    <text x="96" y="62" fill="#171A1E" font-family="Inter, Arial, sans-serif" font-size="27" font-weight="700">Single selection</text>
+    <text x="28" y="116" fill="#6A737E" font-family="Inter, Arial, sans-serif" font-size="19">A Frame, Section, Component,</text>
+    <text x="28" y="144" fill="#6A737E" font-family="Inter, Arial, sans-serif" font-size="19">Instance, or exportable layer.</text>
+    <rect x="76" y="196" width="258" height="186" rx="20" fill="#101216"/>
+    <rect x="101" y="220" width="208" height="138" rx="12" fill="#22262B"/>
+    <rect x="127" y="246" width="156" height="18" rx="9" fill="#E9EDF1"/>
+    <rect x="127" y="278" width="112" height="11" rx="5.5" fill="#737C87"/>
+    <rect x="127" y="319" width="156" height="18" rx="9" fill="#0D99FF"/>
+  </g>
+
+  <g transform="translate(548 438)">
+    <rect width="584" height="430" rx="28" fill="#0D99FF"/>
+    <rect x="28" y="28" width="48" height="48" rx="12" fill="white" fill-opacity=".16"/>
+    <path d="M41 44H63M41 52H57M41 60H50" stroke="white" stroke-width="4" stroke-linecap="round"/>
+    <text x="96" y="62" fill="white" font-family="Inter, Arial, sans-serif" font-size="27" font-weight="700">Multiple selections</text>
+    <text x="28" y="116" fill="white" fill-opacity=".75" font-family="Inter, Arial, sans-serif" font-size="19">Choose independent frames and components.</text>
+    <g transform="translate(28 178)">
+      <rect width="156" height="196" rx="18" fill="#101216"/>
+      <rect x="18" y="22" width="120" height="132" rx="10" fill="#24282D"/>
+      <rect x="18" y="168" width="88" height="9" rx="4.5" fill="white" fill-opacity=".85"/>
+    </g>
+    <g transform="translate(214 156)">
+      <rect width="156" height="218" rx="18" fill="#101216"/>
+      <rect x="18" y="22" width="120" height="154" rx="10" fill="#24282D"/>
+      <circle cx="78" cy="99" r="35" fill="#FFCB2F"/>
+      <rect x="18" y="190" width="104" height="9" rx="4.5" fill="white" fill-opacity=".85"/>
+    </g>
+    <g transform="translate(400 198)">
+      <rect width="156" height="176" rx="18" fill="#101216"/>
+      <rect x="18" y="22" width="120" height="96" rx="10" fill="#24282D"/>
+      <rect x="18" y="138" width="72" height="9" rx="4.5" fill="white" fill-opacity=".85"/>
+    </g>
+  </g>
+
+  <g transform="translate(1182 438)">
+    <rect width="650" height="430" rx="28" fill="white" stroke="#D8DFE7" stroke-width="2"/>
+    <rect x="28" y="28" width="48" height="48" rx="12" fill="#E6F4FF"/>
+    <path d="M41 44H63M41 52H57M41 60H50" stroke="#0D99FF" stroke-width="4" stroke-linecap="round"/>
+    <text x="96" y="62" fill="#171A1E" font-family="Inter, Arial, sans-serif" font-size="27" font-weight="700">Current Page</text>
+    <text x="28" y="116" fill="#6A737E" font-family="Inter, Arial, sans-serif" font-size="19">No wrapper frame required.</text>
+    <rect x="28" y="166" width="594" height="214" rx="20" fill="#EEF2F6"/>
+    <rect x="54" y="190" width="118" height="166" rx="13" fill="#17191D"/>
+    <rect x="194" y="190" width="118" height="166" rx="13" fill="#17191D"/>
+    <rect x="334" y="190" width="118" height="166" rx="13" fill="#17191D"/>
+    <rect x="474" y="214" width="120" height="118" rx="18" fill="#0D99FF"/>
+    <path d="M502 250H566M502 270H548M502 290H574" stroke="white" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <text x="88" y="990" fill="#3F4852" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="650">The exported boundary follows Figma's node tree—not visual proximity on the canvas.</text>
+</svg>

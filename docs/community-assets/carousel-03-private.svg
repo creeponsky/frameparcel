@@ -1,0 +1,41 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1920" height="1080" fill="#F4F7FA"/>
+  <rect x="96" y="84" width="1728" height="912" rx="40" fill="white" stroke="#D9E0E7" stroke-width="2"/>
+  <g transform="translate(154 150)">
+    <rect width="120" height="120" rx="30" fill="#0D99FF"/>
+    <path d="M34 50V37C34 34.8 35.8 33 38 33H51M77 33H90C92.2 33 94 34.8 94 37V50M94 77V90C94 92.2 92.2 94 90 94H77M51 94H38C35.8 94 34 92.2 34 90V77" stroke="white" stroke-width="7" stroke-linecap="round"/>
+    <path d="M47 53L64 44L81 53V73L64 83L47 73V53Z" fill="white"/>
+  </g>
+  <text x="318" y="212" fill="#13161A" font-family="Inter, Arial, sans-serif" font-size="64" font-weight="760" letter-spacing="-2">Private by design.</text>
+  <text x="318" y="268" fill="#69737E" font-family="Inter, Arial, sans-serif" font-size="25">The handoff stays inside Figma until you download it.</text>
+
+  <g transform="translate(154 382)">
+    <circle cx="34" cy="34" r="34" fill="#E8F8F0"/>
+    <path d="M20 34L30 44L49 24" stroke="#0DA463" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="92" y="28" fill="#14171B" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="720">No network access</text>
+    <text x="92" y="62" fill="#717B86" font-family="Inter, Arial, sans-serif" font-size="20">Manifest access is restricted to none.</text>
+  </g>
+  <g transform="translate(154 520)">
+    <circle cx="34" cy="34" r="34" fill="#E8F8F0"/>
+    <path d="M20 34L30 44L49 24" stroke="#0DA463" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="92" y="28" fill="#14171B" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="720">No account or API token</text>
+    <text x="92" y="62" fill="#717B86" font-family="Inter, Arial, sans-serif" font-size="20">Run the plugin and download the ZIP directly.</text>
+  </g>
+  <g transform="translate(154 658)">
+    <circle cx="34" cy="34" r="34" fill="#E8F8F0"/>
+    <path d="M20 34L30 44L49 24" stroke="#0DA463" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="92" y="28" fill="#14171B" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="720">No analytics or hosted storage</text>
+    <text x="92" y="62" fill="#717B86" font-family="Inter, Arial, sans-serif" font-size="20">FrameParcel does not receive or retain your design.</text>
+  </g>
+
+  <g transform="translate(1110 344)">
+    <rect width="560" height="458" rx="34" fill="#14171B"/>
+    <rect x="42" y="42" width="476" height="70" rx="16" fill="#24282E"/>
+    <circle cx="78" cy="77" r="11" fill="#0DA463"/>
+    <text x="108" y="85" fill="#F1F4F7" font-family="SFMono-Regular, Menlo, monospace" font-size="20">LOCAL EXPORT READY</text>
+    <path d="M158 192L280 126L402 192V328L280 396L158 328V192Z" fill="#0D99FF"/>
+    <path d="M158 192L280 260L402 192M280 260V396" stroke="white" stroke-width="9" stroke-linejoin="round"/>
+  </g>
+  <rect x="154" y="858" width="452" height="64" rx="32" fill="#E6EDF3"/>
+  <text x="188" y="900" fill="#414A54" font-family="Inter, Arial, sans-serif" font-size="23" font-weight="650">Free · local-only · open source</text>
+</svg>

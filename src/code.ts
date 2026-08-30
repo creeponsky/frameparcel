@@ -5,6 +5,7 @@ type ExportPreset = "developer" | "review" | "archive" | "custom";
 type ExportOptions = {
   preset: ExportPreset;
   locale: "zh" | "en";
+  scope: "selection" | "page";
   includeNodeIndex: boolean;
   includeRestJson: boolean;
   includeScreenshots: boolean;
@@ -50,7 +51,15 @@ type WalkEntry = {
   childIndex: number;
 };
 
-const EXPORTER_VERSION = "0.2.0";
+type ExportScope = {
+  mode: "selection" | "page";
+  name: string;
+  nodeType: "SELECTION" | "PAGE" | SceneNode["type"];
+  id: string;
+  roots: Array<SceneNode & ExportMixin>;
+};
+
+const EXPORTER_VERSION = "1.0.0";
 
 figma.showUI(__html__, {
   width: 420,
@@ -63,36 +72,79 @@ function isExportable(node: BaseNode): node is SceneNode & ExportMixin {
   return "exportAsync" in node && "width" in node && "height" in node;
 }
 
-function selectedRoot(): (SceneNode & ExportMixin) | null {
-  const selection = figma.currentPage.selection;
-  if (selection.length !== 1) return null;
-  return isExportable(selection[0]) ? selection[0] : null;
+function selectedRoots(): Array<SceneNode & ExportMixin> {
+  return figma.currentPage.selection.filter(isExportable);
+}
+
+function resolveScope(mode: ExportOptions["scope"]): ExportScope | null {
+  if (mode === "page") {
+    const roots = figma.currentPage.children
+      .filter(isExportable)
+      .filter(isEffectivelyVisible);
+    if (roots.length === 0) return null;
+    return {
+      mode,
+      name: figma.currentPage.name,
+      nodeType: "PAGE",
+      id: figma.currentPage.id,
+      roots,
+    };
+  }
+
+  const roots = selectedRoots();
+  if (roots.length === 0 || roots.length !== figma.currentPage.selection.length) {
+    return null;
+  }
+  if (roots.length === 1) {
+    return {
+      mode,
+      name: roots[0].name,
+      nodeType: roots[0].type,
+      id: roots[0].id,
+      roots,
+    };
+  }
+  return {
+    mode,
+    name: `${roots.length} selected layers`,
+    nodeType: "SELECTION",
+    id: roots.map((root) => root.id).join(","),
+    roots,
+  };
 }
 
 function notifySelection(): void {
-  const root = selectedRoot();
-  if (!root) {
-    figma.ui.postMessage({
-      type: "selection",
-      valid: false,
-      reason: figma.currentPage.selection.length === 0
-        ? "请在画布中选择一个 Frame、Section 或页面区域。"
-        : "请只选择一个可导出的节点。",
-    });
-    return;
-  }
-
-  const surfaces = classifyDirectChildren(root);
+  const selectionScope = resolveScope("selection");
+  const pageScope = resolveScope("page");
+  const selectionSurfaces = selectionScope ? classifyScope(selectionScope) : { screens: [], components: [] };
+  const pageSurfaces = pageScope ? classifyScope(pageScope) : { screens: [], components: [] };
   figma.ui.postMessage({
     type: "selection",
-    valid: true,
-    name: root.name,
-    nodeType: root.type,
-    width: root.width,
-    height: root.height,
-    childCount: "children" in root ? root.children.length : 0,
-    screenCount: surfaces.screens.length,
-    componentCount: surfaces.components.length,
+    selection: selectionScope
+      ? {
+          valid: true,
+          name: selectionScope.name,
+          nodeType: selectionScope.nodeType,
+          rootCount: selectionScope.roots.length,
+          screenCount: selectionSurfaces.screens.length,
+          componentCount: selectionSurfaces.components.length,
+        }
+      : {
+          valid: false,
+          reason: figma.currentPage.selection.length === 0
+            ? "请先选择一个或多个 Frame、Section、Component 或图层。"
+            : "当前选择中包含不可导出的节点。",
+        },
+    page: pageScope
+      ? {
+          valid: true,
+          name: pageScope.name,
+          nodeType: pageScope.nodeType,
+          rootCount: pageScope.roots.length,
+          screenCount: pageSurfaces.screens.length,
+          componentCount: pageSurfaces.components.length,
+        }
+      : { valid: false, reason: "当前 Page 没有可导出的可见内容。" },
   });
 }
 
@@ -165,6 +217,23 @@ function walk(root: BaseNode): WalkEntry[] {
   return output;
 }
 
+function walkScope(scope: ExportScope): WalkEntry[] {
+  if (scope.mode === "selection" && scope.roots.length === 1) {
+    return walk(scope.roots[0]);
+  }
+  const output: WalkEntry[] = [];
+  const visit = (node: BaseNode, path: string, parentId: string | null, childIndex: number): void => {
+    output.push({ node, path, parentId, childIndex });
+    if ("children" in node) {
+      node.children.forEach((child, index) => visit(child, `${path}/${child.name}`, node.id, index));
+    }
+  };
+  scope.roots.forEach((root, index) => {
+    visit(root, `${scope.name}/${root.name}`, scope.id, index);
+  });
+  return output;
+}
+
 function buildNodeIndex(entries: WalkEntry[]): IndexedNode[] {
   return entries.map(({ node, path, parentId, childIndex }) => {
     const indexed: IndexedNode = { id: node.id, name: node.name, type: node.type, path, parentId, childIndex };
@@ -223,7 +292,13 @@ function isEffectivelyVisible(node: BaseNode): boolean {
 }
 
 function isVectorPrimitive(node: BaseNode): node is SceneNode & ExportMixin {
-  return isExportable(node) && ["VECTOR", "BOOLEAN_OPERATION", "STAR", "POLYGON", "LINE", "ELLIPSE"].includes(node.type);
+  if (!isExportable(node) || !["VECTOR", "BOOLEAN_OPERATION", "STAR", "POLYGON", "LINE", "ELLIPSE"].includes(node.type)) {
+    return false;
+  }
+  const hasVisiblePaint = ([...paintsFrom(node, "fills"), ...paintsFrom(node, "strokes")])
+    .some((paint) => paint.visible !== false && (paint.opacity ?? 1) > 0);
+  const hasVisibleEffect = "effects" in node && node.effects.some((effect) => effect.visible !== false);
+  return hasVisiblePaint || hasVisibleEffect;
 }
 
 function isSmallVectorComposite(node: BaseNode): node is SceneNode & ChildrenMixin & ExportMixin {
@@ -262,7 +337,10 @@ function collectSmartSvgCandidates(entries: WalkEntry[]): Array<SceneNode & Expo
     }
   }
   for (const { node } of entries) {
-    if (isVectorPrimitive(node) && isEffectivelyVisible(node) && !hasSelectedAncestor(node)) output.push(node);
+    if (isVectorPrimitive(node) && isEffectivelyVisible(node) && !hasSelectedAncestor(node)) {
+      compositeIds.add(node.id);
+      output.push(node);
+    }
   }
   return output;
 }
@@ -277,6 +355,54 @@ function classifyDirectChildren(root: BaseNode): { screens: Array<SceneNode & Ex
     const surfaceType = ["FRAME", "COMPONENT", "INSTANCE", "SECTION"].includes(child.type);
     if (surfaceType && shortSide >= 280 && longSide >= 400) screens.push(child);
     else if (child.width >= 16 && child.height >= 16) components.push(child);
+  }
+  return { screens, components };
+}
+
+function classifySurface(node: SceneNode & ExportMixin): "screen" | "component" | null {
+  const shortSide = Math.min(node.width, node.height);
+  const longSide = Math.max(node.width, node.height);
+  const surfaceType = ["FRAME", "COMPONENT", "INSTANCE", "SECTION"].includes(node.type);
+  if (surfaceType && shortSide >= 280 && longSide >= 400) return "screen";
+  if (node.width >= 16 && node.height >= 16) return "component";
+  return null;
+}
+
+function classifyScope(scope: ExportScope): { screens: Array<SceneNode & ExportMixin>; components: Array<SceneNode & ExportMixin> } {
+  if (scope.mode === "selection" && scope.roots.length === 1) {
+    const root = scope.roots[0];
+    const children = classifyDirectChildren(root);
+    if (
+      children.screens.length >= 2 ||
+      (children.screens.length >= 1 && children.components.length >= 1) ||
+      root.type === "SECTION"
+    ) return children;
+    const kind = classifySurface(root);
+    return {
+      screens: kind === "screen" ? [root] : [],
+      components: kind === "component" ? [root] : [],
+    };
+  }
+
+  const screens: Array<SceneNode & ExportMixin> = [];
+  const components: Array<SceneNode & ExportMixin> = [];
+  const add = (node: SceneNode & ExportMixin): void => {
+    const kind = classifySurface(node);
+    if (kind === "screen") screens.push(node);
+    if (kind === "component") components.push(node);
+  };
+  for (const root of scope.roots) {
+    const children = classifyDirectChildren(root);
+    if (
+      root.type === "SECTION" ||
+      children.screens.length >= 2 ||
+      (children.screens.length >= 1 && children.components.length >= 1)
+    ) {
+      screens.push(...children.screens);
+      components.push(...children.components);
+    } else {
+      add(root);
+    }
   }
   return { screens, components };
 }
@@ -302,7 +428,7 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;" })[character] ?? character);
 }
 
-function buildViewerHtml(root: SceneNode, previews: PreviewEntry[], generatedAt: string): string {
+function buildViewerHtml(scope: ExportScope, previews: PreviewEntry[], generatedAt: string): string {
   const cards = previews.map((preview) => `
     <a class="card" href="${encodeURI(preview.path)}" target="_blank" rel="noreferrer">
       <div class="canvas"><img src="${encodeURI(preview.path)}" alt="${escapeHtml(preview.name)}"></div>
@@ -310,14 +436,14 @@ function buildViewerHtml(root: SceneNode, previews: PreviewEntry[], generatedAt:
     </a>`).join("");
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escapeHtml(root.name)} — Design Handoff</title>
+<title>${escapeHtml(scope.name)} — Design Handoff</title>
 <style>
 :root{color-scheme:light dark;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--bg:#f5f5f3;--panel:#fff;--text:#171715;--muted:#6b6b66;--line:#deded8;--canvas:#e9e9e5}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text)}header{padding:48px clamp(24px,5vw,72px) 28px;border-bottom:1px solid var(--line)}h1{font-size:clamp(28px,4vw,48px);letter-spacing:-.04em;margin:0 0 10px}p{color:var(--muted);margin:0;line-height:1.55}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:20px;padding:32px clamp(24px,5vw,72px) 72px}.card{display:block;color:inherit;text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:transform .16s ease,box-shadow .16s ease}.card:hover{transform:translateY(-2px);box-shadow:0 12px 30px #00000014}.canvas{height:360px;padding:18px;display:flex;align-items:center;justify-content:center;background:var(--canvas)}img{max-width:100%;max-height:100%;object-fit:contain}.meta{display:flex;flex-direction:column;gap:5px;padding:14px 16px}.meta strong{font-size:14px}.meta span{font-size:12px;color:var(--muted)}@media(prefers-color-scheme:dark){:root{--bg:#151514;--panel:#20201f;--text:#f1f1ee;--muted:#a0a09a;--line:#343431;--canvas:#111110}}@media(max-width:560px){header{padding-top:32px}.grid{grid-template-columns:1fr}.canvas{height:460px}}
-</style></head><body><header><h1>${escapeHtml(root.name)}</h1><p>${previews.filter((item) => item.kind === "screen").length} screens · ${previews.filter((item) => item.kind === "component").length} component previews · exported locally ${escapeHtml(generatedAt)}</p></header><main class="grid">${cards}</main></body></html>`;
+</style></head><body><header><h1>${escapeHtml(scope.name)}</h1><p>${previews.filter((item) => item.kind === "screen").length} screens · ${previews.filter((item) => item.kind === "component").length} component previews · exported locally ${escapeHtml(generatedAt)}</p></header><main class="grid">${cards}</main></body></html>`;
 }
 
-function buildHandoffMarkdown(root: SceneNode, options: ExportOptions, previews: PreviewEntry[], nodeCount: number, generatedAt: string): string {
-  return `# ${root.name} — Design handoff
+function buildHandoffMarkdown(scope: ExportScope, options: ExportOptions, previews: PreviewEntry[], nodeCount: number, generatedAt: string): string {
+  return `# ${scope.name} — Design handoff
 
 Generated locally by FrameParcel ${EXPORTER_VERSION} on ${generatedAt}.
 
@@ -331,7 +457,9 @@ Generated locally by FrameParcel ${EXPORTER_VERSION} on ${generatedAt}.
 
 ## Package facts
 
-- Selected node: ${root.name} (${root.id})
+- Export scope: ${scope.mode}
+- Scope root: ${scope.name} (${scope.id})
+- Top-level exported roots: ${scope.roots.length}
 - Node count: ${nodeCount}
 - Screen previews: ${previews.filter((item) => item.kind === "screen").length}
 - Component previews: ${previews.filter((item) => item.kind === "component").length}
@@ -342,18 +470,23 @@ Generated locally by FrameParcel ${EXPORTER_VERSION} on ${generatedAt}.
 
 - Font names and styles are recorded, but licensed font files are not included.
 - Screenshot pixels are previews; original image fills are preserved separately when enabled.
-- A design outside the selected Figma node cannot appear in this package, even if it is visually positioned nearby on the canvas.
+- A design outside the exported selection or Page cannot appear in this package, even if it is visually positioned nearby on the canvas.
 `;
 }
 
-async function exportPackage(root: SceneNode & ExportMixin, options: ExportOptions): Promise<void> {
-  const entries = walk(root);
+async function exportPackage(scope: ExportScope, options: ExportOptions): Promise<void> {
+  const entries = walkScope(scope);
   const imageRefs = collectImageReferences(entries);
   const imageHashes = [...new Set(imageRefs.map((ref) => ref.imageHash))];
-  const surfaces = classifyDirectChildren(root);
+  const surfaces = classifyScope(scope);
   const svgCandidates = options.includeSvg ? collectSmartSvgCandidates(entries) : [];
-  const previewCount = options.includeScreenshots ? 1 + surfaces.screens.length + surfaces.components.length : 0;
-  const estimatedTotal = 2 + (options.includeNodeIndex ? 1 : 0) + (options.includeRestJson ? 1 : 0) + previewCount
+  const canExportOverview = scope.mode === "selection" && scope.roots.length === 1 &&
+    !surfaces.screens.includes(scope.roots[0]) && !surfaces.components.includes(scope.roots[0]);
+  const previewCount = options.includeScreenshots
+    ? (canExportOverview ? 1 : 0) + surfaces.screens.length + surfaces.components.length
+    : 0;
+  const restSteps = options.includeRestJson ? scope.roots.length : 0;
+  const estimatedTotal = 2 + (options.includeNodeIndex ? 1 : 0) + restSteps + previewCount
     + (options.includeImages ? imageHashes.length : 0) + svgCandidates.length + (options.includeViewer ? 2 : 0);
   let completed = 0;
   const generatedAt = new Date().toISOString();
@@ -377,29 +510,60 @@ async function exportPackage(root: SceneNode & ExportMixin, options: ExportOptio
       exportedAt: generatedAt,
       fileName: figma.root.name,
       pageName: figma.currentPage.name,
-      selection: { id: root.id, name: root.name, type: root.type },
+      scope: {
+        mode: scope.mode,
+        id: scope.id,
+        name: scope.name,
+        type: scope.nodeType,
+        roots: scope.roots.map((root) => ({ id: root.id, name: root.name, type: root.type })),
+      },
       nodes: index,
     });
     progress(label("已写入开发坐标索引", "Wrote the implementation node index"));
   }
 
   if (options.includeRestJson) {
-    try {
-      const rest = await root.exportAsync({ format: "JSON_REST_V1" });
-      postJson("design/rest-v1.json", rest);
-    } catch (error) {
-      postJson("design/rest-v1-error.json", { message: error instanceof Error ? error.message : String(error) });
+    if (scope.mode === "selection" && scope.roots.length === 1) {
+      try {
+        const rest = await scope.roots[0].exportAsync({ format: "JSON_REST_V1" });
+        postJson("design/rest-v1.json", rest);
+      } catch (error) {
+        postJson("design/rest-v1-error.json", { message: error instanceof Error ? error.message : String(error) });
+      }
+      progress(label("已写入完整 REST V1 归档", "Wrote the REST V1 archive"));
+    } else {
+      const roots: Array<Record<string, unknown>> = [];
+      for (let position = 0; position < scope.roots.length; position += 1) {
+        const root = scope.roots[position];
+        try {
+          roots.push({ id: root.id, name: root.name, type: root.type, data: await root.exportAsync({ format: "JSON_REST_V1" }) });
+        } catch (error) {
+          roots.push({ id: root.id, name: root.name, type: root.type, error: error instanceof Error ? error.message : String(error) });
+        }
+        progress(label(
+          `REST V1 ${position + 1}/${scope.roots.length}：${root.name}`,
+          `REST V1 ${position + 1}/${scope.roots.length}: ${root.name}`,
+        ));
+      }
+      postJson("design/rest-v1.json", {
+        exporterVersion: EXPORTER_VERSION,
+        exportedAt: generatedAt,
+        scope: { mode: scope.mode, id: scope.id, name: scope.name, type: scope.nodeType },
+        roots,
+      });
     }
-    progress(label("已写入完整 REST V1 归档", "Wrote the REST V1 archive"));
   }
 
   if (options.includeScreenshots) {
-    const overviewWidth = Math.min(4096, Math.max(1, Math.round(root.width)));
-    const overviewPath = `screens/00-${sanitizeFilename(root.name, "selection")}-overview.png`;
-    const overview = await root.exportAsync({ format: "PNG", constraint: { type: "WIDTH", value: overviewWidth } });
-    postFile(overviewPath, overview);
-    previews.push({ nodeId: root.id, name: `${root.name} overview`, nodeType: root.type, width: root.width, height: root.height, path: overviewPath, kind: "overview" });
-    progress(label("已导出总览图", "Exported the overview"));
+    if (canExportOverview) {
+      const root = scope.roots[0];
+      const overviewWidth = Math.min(4096, Math.max(1, Math.round(root.width)));
+      const overviewPath = `screens/00-${sanitizeFilename(root.name, "selection")}-overview.png`;
+      const overview = await root.exportAsync({ format: "PNG", constraint: { type: "WIDTH", value: overviewWidth } });
+      postFile(overviewPath, overview);
+      previews.push({ nodeId: root.id, name: `${root.name} overview`, nodeType: root.type, width: root.width, height: root.height, path: overviewPath, kind: "overview" });
+      progress(label("已导出总览图", "Exported the overview"));
+    }
 
     for (let position = 0; position < surfaces.screens.length; position += 1) {
       const screen = surfaces.screens[position];
@@ -469,7 +633,21 @@ async function exportPackage(root: SceneNode & ExportMixin, options: ExportOptio
   postJson("assets/manifest.json", {
     exporterVersion: EXPORTER_VERSION,
     preset: options.preset,
-    selectedNode: { id: root.id, name: root.name, type: root.type, width: root.width, height: root.height },
+    scope: { mode: scope.mode, id: scope.id, name: scope.name, type: scope.nodeType },
+    selectedNodes: scope.roots.map((root) => ({
+      id: root.id,
+      name: root.name,
+      type: root.type,
+      width: root.width,
+      height: root.height,
+    })),
+    selectedNode: scope.roots.length === 1 ? {
+      id: scope.roots[0].id,
+      name: scope.roots[0].name,
+      type: scope.roots[0].type,
+      width: scope.roots[0].width,
+      height: scope.roots[0].height,
+    } : undefined,
     previews,
     images: imageManifest,
     svg: svgManifest,
@@ -477,13 +655,13 @@ async function exportPackage(root: SceneNode & ExportMixin, options: ExportOptio
   progress(label("已写入交付清单", "Wrote the handoff manifest"));
 
   if (options.includeViewer) {
-    postFile("index.html", strToU8(buildViewerHtml(root, previews, generatedAt)));
+    postFile("index.html", strToU8(buildViewerHtml(scope, previews, generatedAt)));
     progress(label("已生成本地浏览页", "Generated the local browser"));
-    postFile("HANDOFF.md", strToU8(buildHandoffMarkdown(root, options, previews, entries.length, generatedAt)));
+    postFile("HANDOFF.md", strToU8(buildHandoffMarkdown(scope, options, previews, entries.length, generatedAt)));
     progress(label("已生成交付说明", "Generated the handoff guide"));
   }
 
-  const filename = `${sanitizeFilename(root.name, "figma-design")}-handoff.zip`;
+  const filename = `${sanitizeFilename(scope.name, "figma-design")}-handoff.zip`;
   figma.ui.postMessage({
     type: "export-complete",
     filename,
@@ -496,7 +674,8 @@ async function exportPackage(root: SceneNode & ExportMixin, options: ExportOptio
       svgCandidates: options.includeSvg ? svgCandidates.length : 0,
     },
     summary: [
-      `Selection: ${root.name} (${root.id})`,
+      `Scope: ${scope.mode} · ${scope.name} (${scope.id})`,
+      `Top-level roots: ${scope.roots.length}`,
       `Preset: ${options.preset}`,
       `Nodes: ${entries.length}`,
       `Screens: ${options.includeScreenshots ? surfaces.screens.length : 0}`,
@@ -511,13 +690,13 @@ async function exportPackage(root: SceneNode & ExportMixin, options: ExportOptio
 
 figma.ui.onmessage = async (message: { type?: string; options?: ExportOptions }) => {
   if (message.type !== "export" || !message.options) return;
-  const root = selectedRoot();
-  if (!root) {
-    figma.ui.postMessage({ type: "export-error", message: "选择已变化，请重新选择一个节点。" });
+  const scope = resolveScope(message.options.scope);
+  if (!scope) {
+    figma.ui.postMessage({ type: "export-error", message: "导出范围已变化，请重新选择图层或当前 Page。" });
     return;
   }
   try {
-    await exportPackage(root, message.options);
+    await exportPackage(scope, message.options);
   } catch (error) {
     figma.ui.postMessage({ type: "export-error", message: `导出失败：${error instanceof Error ? error.message : String(error)}` });
   }

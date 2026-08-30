@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest a new export scope, artifact, or workflow.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Handoff problem
+      description: What is difficult today, and who is the package being handed to?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome
+      description: Describe the artifact or behavior you would expect FrameParcel to produce.
+    validations:
+      required: true
+  - type: dropdown
+    id: privacy
+    attributes:
+      label: Can this remain fully local?
+      options:
+        - Yes
+        - No
+        - Not sure
+    validations:
+      required: true

@@ -1,9 +1,10 @@
 import { strToU8, zipSync } from "fflate";
 
 type Receipt = { preset: string; nodes: number; screens: number; components: number; images: number; svgCandidates: number };
+type ScopeSummary = { valid: boolean; name?: string; nodeType?: string; rootCount?: number; screenCount?: number; componentCount?: number; reason?: string };
 
 type PluginMessage =
-  | { type: "selection"; valid: boolean; name?: string; nodeType?: string; width?: number; height?: number; childCount?: number; screenCount?: number; componentCount?: number; reason?: string }
+  | { type: "selection"; selection: ScopeSummary; page: ScopeSummary }
   | { type: "export-start"; total: number }
   | { type: "export-file"; path: string; bytes: Uint8Array | number[] }
   | { type: "export-progress"; completed: number; total: number; label: string }
@@ -12,6 +13,7 @@ type PluginMessage =
 
 type Preset = "developer" | "review" | "archive" | "custom";
 type Locale = "zh" | "en";
+type ScopeMode = "selection" | "page";
 
 const locale: Locale = navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
 const copy = {
@@ -19,6 +21,11 @@ const copy = {
     tagline: "把设计、素材和实现上下文装进一个可检查的本地交付包。",
     "local-only": "仅本机",
     "purpose-label": "这份包将用来做什么？",
+    "scope-label": "导出范围",
+    "scope-selection-title": "当前选择",
+    "scope-selection-copy": "支持单个节点，也支持多选多个 Frame、Section 或组件。",
+    "scope-page-title": "当前 Page",
+    "scope-page-copy": "无需手工套外层 Frame，导出当前 Page 内所有可见顶层内容。",
     "developer-title": "交给开发或 AI",
     "developer-copy": "页面预览、坐标样式、原始图片、精简 SVG，以及可直接浏览的 index.html。",
     recommended: "推荐",
@@ -56,6 +63,11 @@ const receipt = document.querySelector<HTMLDivElement>("#receipt")!;
 const receiptCopy = document.querySelector<HTMLSpanElement>("#receipt-copy")!;
 const files: Record<string, Uint8Array> = {};
 let currentPreset: Preset = "developer";
+let currentScope: ScopeMode = "selection";
+let latestScopes: Record<ScopeMode, ScopeSummary> = {
+  selection: { valid: false },
+  page: { valid: false },
+};
 
 const optionIds = ["node-index", "rest-json", "screenshots", "images", "svg", "viewer"] as const;
 
@@ -87,6 +99,33 @@ document.querySelectorAll<HTMLInputElement>('input[name="preset"]').forEach((inp
 });
 optionIds.forEach((id) => document.querySelector<HTMLInputElement>(`#${id}`)!.addEventListener("change", markCustom));
 
+function renderScope(): void {
+  const summary = latestScopes[currentScope];
+  if (summary.valid) {
+    selectionName.textContent = summary.name ?? (currentScope === "page" ? "Current Page" : "Selection");
+    selectionMeta.textContent = locale === "zh"
+      ? `${summary.nodeType} · ${summary.rootCount ?? 0} 个顶层节点 · 识别 ${summary.screenCount ?? 0} 个页面 / ${summary.componentCount ?? 0} 个组件`
+      : `${summary.nodeType} · ${summary.rootCount ?? 0} top-level nodes · ${summary.screenCount ?? 0} screens / ${summary.componentCount ?? 0} components`;
+    exportButton.disabled = false;
+  } else {
+    selectionName.textContent = currentScope === "page"
+      ? (locale === "zh" ? "当前 Page 无可导出内容" : "Nothing exportable on this Page")
+      : (locale === "zh" ? "请选择一个或多个设计节点" : "Select one or more design nodes");
+    selectionMeta.textContent = locale === "zh"
+      ? (summary.reason ?? "当前范围无效")
+      : (summary.reason ?? "The current scope is not exportable.");
+    exportButton.disabled = true;
+  }
+}
+
+document.querySelectorAll<HTMLInputElement>('input[name="scope"]').forEach((input) => {
+  input.addEventListener("change", () => {
+    if (!input.checked) return;
+    currentScope = input.value as ScopeMode;
+    renderScope();
+  });
+});
+
 function setStatus(message: string, error = false): void {
   status.textContent = message;
   status.classList.toggle("error", error);
@@ -111,6 +150,7 @@ exportButton.addEventListener("click", () => {
       options: {
         preset: currentPreset,
         locale,
+        scope: currentScope,
         includeNodeIndex: checked("node-index"),
         includeRestJson: checked("rest-json"),
         includeScreenshots: checked("screenshots"),
@@ -128,17 +168,13 @@ window.onmessage = (event: MessageEvent<{ pluginMessage: PluginMessage }>) => {
   if (!message) return;
 
   if (message.type === "selection") {
-    if (message.valid) {
-      selectionName.textContent = message.name ?? "未命名节点";
-      selectionMeta.textContent = locale === "zh"
-        ? `${message.nodeType} · ${Math.round(message.width ?? 0)} × ${Math.round(message.height ?? 0)} · 识别 ${message.screenCount ?? 0} 个页面 / ${message.componentCount ?? 0} 个组件`
-        : `${message.nodeType} · ${Math.round(message.width ?? 0)} × ${Math.round(message.height ?? 0)} · ${message.screenCount ?? 0} screens / ${message.componentCount ?? 0} components`;
-      exportButton.disabled = false;
-    } else {
-      selectionName.textContent = locale === "zh" ? "请选择一个可导出的设计区域" : "Select one exportable design area";
-      selectionMeta.textContent = locale === "zh" ? (message.reason ?? "当前选择无效") : "Select exactly one Frame, Section, Component, or exportable node.";
-      exportButton.disabled = true;
+    latestScopes = { selection: message.selection, page: message.page };
+    if (!latestScopes.selection.valid && latestScopes.page.valid) {
+      currentScope = "page";
+      const pageInput = document.querySelector<HTMLInputElement>('input[name="scope"][value="page"]');
+      if (pageInput) pageInput.checked = true;
     }
+    renderScope();
     return;
   }
 

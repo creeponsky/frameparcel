@@ -173,7 +173,7 @@
   }
 
   // src/code.ts
-  var EXPORTER_VERSION = "0.2.0";
+  var EXPORTER_VERSION = "1.0.0";
   figma.showUI(__html__, {
     width: 420,
     height: 680,
@@ -183,32 +183,68 @@
   function isExportable(node) {
     return "exportAsync" in node && "width" in node && "height" in node;
   }
-  function selectedRoot() {
-    const selection = figma.currentPage.selection;
-    if (selection.length !== 1) return null;
-    return isExportable(selection[0]) ? selection[0] : null;
+  function selectedRoots() {
+    return figma.currentPage.selection.filter(isExportable);
+  }
+  function resolveScope(mode) {
+    if (mode === "page") {
+      const roots2 = figma.currentPage.children.filter(isExportable).filter(isEffectivelyVisible);
+      if (roots2.length === 0) return null;
+      return {
+        mode,
+        name: figma.currentPage.name,
+        nodeType: "PAGE",
+        id: figma.currentPage.id,
+        roots: roots2
+      };
+    }
+    const roots = selectedRoots();
+    if (roots.length === 0 || roots.length !== figma.currentPage.selection.length) {
+      return null;
+    }
+    if (roots.length === 1) {
+      return {
+        mode,
+        name: roots[0].name,
+        nodeType: roots[0].type,
+        id: roots[0].id,
+        roots
+      };
+    }
+    return {
+      mode,
+      name: `${roots.length} selected layers`,
+      nodeType: "SELECTION",
+      id: roots.map((root) => root.id).join(","),
+      roots
+    };
   }
   function notifySelection() {
-    const root = selectedRoot();
-    if (!root) {
-      figma.ui.postMessage({
-        type: "selection",
-        valid: false,
-        reason: figma.currentPage.selection.length === 0 ? "\u8BF7\u5728\u753B\u5E03\u4E2D\u9009\u62E9\u4E00\u4E2A Frame\u3001Section \u6216\u9875\u9762\u533A\u57DF\u3002" : "\u8BF7\u53EA\u9009\u62E9\u4E00\u4E2A\u53EF\u5BFC\u51FA\u7684\u8282\u70B9\u3002"
-      });
-      return;
-    }
-    const surfaces = classifyDirectChildren(root);
+    const selectionScope = resolveScope("selection");
+    const pageScope = resolveScope("page");
+    const selectionSurfaces = selectionScope ? classifyScope(selectionScope) : { screens: [], components: [] };
+    const pageSurfaces = pageScope ? classifyScope(pageScope) : { screens: [], components: [] };
     figma.ui.postMessage({
       type: "selection",
-      valid: true,
-      name: root.name,
-      nodeType: root.type,
-      width: root.width,
-      height: root.height,
-      childCount: "children" in root ? root.children.length : 0,
-      screenCount: surfaces.screens.length,
-      componentCount: surfaces.components.length
+      selection: selectionScope ? {
+        valid: true,
+        name: selectionScope.name,
+        nodeType: selectionScope.nodeType,
+        rootCount: selectionScope.roots.length,
+        screenCount: selectionSurfaces.screens.length,
+        componentCount: selectionSurfaces.components.length
+      } : {
+        valid: false,
+        reason: figma.currentPage.selection.length === 0 ? "\u8BF7\u5148\u9009\u62E9\u4E00\u4E2A\u6216\u591A\u4E2A Frame\u3001Section\u3001Component \u6216\u56FE\u5C42\u3002" : "\u5F53\u524D\u9009\u62E9\u4E2D\u5305\u542B\u4E0D\u53EF\u5BFC\u51FA\u7684\u8282\u70B9\u3002"
+      },
+      page: pageScope ? {
+        valid: true,
+        name: pageScope.name,
+        nodeType: pageScope.nodeType,
+        rootCount: pageScope.roots.length,
+        screenCount: pageSurfaces.screens.length,
+        componentCount: pageSurfaces.components.length
+      } : { valid: false, reason: "\u5F53\u524D Page \u6CA1\u6709\u53EF\u5BFC\u51FA\u7684\u53EF\u89C1\u5185\u5BB9\u3002" }
     });
   }
   figma.on("selectionchange", notifySelection);
@@ -332,6 +368,22 @@
     visit(root, root.name, root.parent?.id ?? null, 0);
     return output;
   }
+  function walkScope(scope) {
+    if (scope.mode === "selection" && scope.roots.length === 1) {
+      return walk(scope.roots[0]);
+    }
+    const output = [];
+    const visit = (node, path, parentId, childIndex) => {
+      output.push({ node, path, parentId, childIndex });
+      if ("children" in node) {
+        node.children.forEach((child, index) => visit(child, `${path}/${child.name}`, node.id, index));
+      }
+    };
+    scope.roots.forEach((root, index) => {
+      visit(root, `${scope.name}/${root.name}`, scope.id, index);
+    });
+    return output;
+  }
   function buildNodeIndex(entries) {
     return entries.map(({ node, path, parentId, childIndex }) => {
       const indexed = { id: node.id, name: node.name, type: node.type, path, parentId, childIndex };
@@ -383,7 +435,12 @@
     return true;
   }
   function isVectorPrimitive(node) {
-    return isExportable(node) && ["VECTOR", "BOOLEAN_OPERATION", "STAR", "POLYGON", "LINE", "ELLIPSE"].includes(node.type);
+    if (!isExportable(node) || !["VECTOR", "BOOLEAN_OPERATION", "STAR", "POLYGON", "LINE", "ELLIPSE"].includes(node.type)) {
+      return false;
+    }
+    const hasVisiblePaint = [...paintsFrom(node, "fills"), ...paintsFrom(node, "strokes")].some((paint) => paint.visible !== false && (paint.opacity ?? 1) > 0);
+    const hasVisibleEffect = "effects" in node && node.effects.some((effect) => effect.visible !== false);
+    return hasVisiblePaint || hasVisibleEffect;
   }
   function isSmallVectorComposite(node) {
     if (!isExportable(node) || !("children" in node) || !isEffectivelyVisible(node)) return false;
@@ -420,7 +477,10 @@
       }
     }
     for (const { node } of entries) {
-      if (isVectorPrimitive(node) && isEffectivelyVisible(node) && !hasSelectedAncestor(node)) output.push(node);
+      if (isVectorPrimitive(node) && isEffectivelyVisible(node) && !hasSelectedAncestor(node)) {
+        compositeIds.add(node.id);
+        output.push(node);
+      }
     }
     return output;
   }
@@ -434,6 +494,43 @@
       const surfaceType = ["FRAME", "COMPONENT", "INSTANCE", "SECTION"].includes(child.type);
       if (surfaceType && shortSide >= 280 && longSide >= 400) screens.push(child);
       else if (child.width >= 16 && child.height >= 16) components.push(child);
+    }
+    return { screens, components };
+  }
+  function classifySurface(node) {
+    const shortSide = Math.min(node.width, node.height);
+    const longSide = Math.max(node.width, node.height);
+    const surfaceType = ["FRAME", "COMPONENT", "INSTANCE", "SECTION"].includes(node.type);
+    if (surfaceType && shortSide >= 280 && longSide >= 400) return "screen";
+    if (node.width >= 16 && node.height >= 16) return "component";
+    return null;
+  }
+  function classifyScope(scope) {
+    if (scope.mode === "selection" && scope.roots.length === 1) {
+      const root = scope.roots[0];
+      const children = classifyDirectChildren(root);
+      if (children.screens.length >= 2 || children.screens.length >= 1 && children.components.length >= 1 || root.type === "SECTION") return children;
+      const kind = classifySurface(root);
+      return {
+        screens: kind === "screen" ? [root] : [],
+        components: kind === "component" ? [root] : []
+      };
+    }
+    const screens = [];
+    const components = [];
+    const add = (node) => {
+      const kind = classifySurface(node);
+      if (kind === "screen") screens.push(node);
+      if (kind === "component") components.push(node);
+    };
+    for (const root of scope.roots) {
+      const children = classifyDirectChildren(root);
+      if (root.type === "SECTION" || children.screens.length >= 2 || children.screens.length >= 1 && children.components.length >= 1) {
+        screens.push(...children.screens);
+        components.push(...children.components);
+      } else {
+        add(root);
+      }
     }
     return { screens, components };
   }
@@ -454,7 +551,7 @@
   function escapeHtml(value) {
     return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character] ?? character);
   }
-  function buildViewerHtml(root, previews, generatedAt) {
+  function buildViewerHtml(scope, previews, generatedAt) {
     const cards = previews.map((preview) => `
     <a class="card" href="${encodeURI(preview.path)}" target="_blank" rel="noreferrer">
       <div class="canvas"><img src="${encodeURI(preview.path)}" alt="${escapeHtml(preview.name)}"></div>
@@ -462,13 +559,13 @@
     </a>`).join("");
     return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escapeHtml(root.name)} \u2014 Design Handoff</title>
+<title>${escapeHtml(scope.name)} \u2014 Design Handoff</title>
 <style>
 :root{color-scheme:light dark;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--bg:#f5f5f3;--panel:#fff;--text:#171715;--muted:#6b6b66;--line:#deded8;--canvas:#e9e9e5}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text)}header{padding:48px clamp(24px,5vw,72px) 28px;border-bottom:1px solid var(--line)}h1{font-size:clamp(28px,4vw,48px);letter-spacing:-.04em;margin:0 0 10px}p{color:var(--muted);margin:0;line-height:1.55}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:20px;padding:32px clamp(24px,5vw,72px) 72px}.card{display:block;color:inherit;text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:transform .16s ease,box-shadow .16s ease}.card:hover{transform:translateY(-2px);box-shadow:0 12px 30px #00000014}.canvas{height:360px;padding:18px;display:flex;align-items:center;justify-content:center;background:var(--canvas)}img{max-width:100%;max-height:100%;object-fit:contain}.meta{display:flex;flex-direction:column;gap:5px;padding:14px 16px}.meta strong{font-size:14px}.meta span{font-size:12px;color:var(--muted)}@media(prefers-color-scheme:dark){:root{--bg:#151514;--panel:#20201f;--text:#f1f1ee;--muted:#a0a09a;--line:#343431;--canvas:#111110}}@media(max-width:560px){header{padding-top:32px}.grid{grid-template-columns:1fr}.canvas{height:460px}}
-</style></head><body><header><h1>${escapeHtml(root.name)}</h1><p>${previews.filter((item) => item.kind === "screen").length} screens \xB7 ${previews.filter((item) => item.kind === "component").length} component previews \xB7 exported locally ${escapeHtml(generatedAt)}</p></header><main class="grid">${cards}</main></body></html>`;
+</style></head><body><header><h1>${escapeHtml(scope.name)}</h1><p>${previews.filter((item) => item.kind === "screen").length} screens \xB7 ${previews.filter((item) => item.kind === "component").length} component previews \xB7 exported locally ${escapeHtml(generatedAt)}</p></header><main class="grid">${cards}</main></body></html>`;
   }
-  function buildHandoffMarkdown(root, options, previews, nodeCount, generatedAt) {
-    return `# ${root.name} \u2014 Design handoff
+  function buildHandoffMarkdown(scope, options, previews, nodeCount, generatedAt) {
+    return `# ${scope.name} \u2014 Design handoff
 
 Generated locally by FrameParcel ${EXPORTER_VERSION} on ${generatedAt}.
 
@@ -482,7 +579,9 @@ Generated locally by FrameParcel ${EXPORTER_VERSION} on ${generatedAt}.
 
 ## Package facts
 
-- Selected node: ${root.name} (${root.id})
+- Export scope: ${scope.mode}
+- Scope root: ${scope.name} (${scope.id})
+- Top-level exported roots: ${scope.roots.length}
 - Node count: ${nodeCount}
 - Screen previews: ${previews.filter((item) => item.kind === "screen").length}
 - Component previews: ${previews.filter((item) => item.kind === "component").length}
@@ -493,17 +592,19 @@ Generated locally by FrameParcel ${EXPORTER_VERSION} on ${generatedAt}.
 
 - Font names and styles are recorded, but licensed font files are not included.
 - Screenshot pixels are previews; original image fills are preserved separately when enabled.
-- A design outside the selected Figma node cannot appear in this package, even if it is visually positioned nearby on the canvas.
+- A design outside the exported selection or Page cannot appear in this package, even if it is visually positioned nearby on the canvas.
 `;
   }
-  async function exportPackage(root, options) {
-    const entries = walk(root);
+  async function exportPackage(scope, options) {
+    const entries = walkScope(scope);
     const imageRefs = collectImageReferences(entries);
     const imageHashes = [...new Set(imageRefs.map((ref) => ref.imageHash))];
-    const surfaces = classifyDirectChildren(root);
+    const surfaces = classifyScope(scope);
     const svgCandidates = options.includeSvg ? collectSmartSvgCandidates(entries) : [];
-    const previewCount = options.includeScreenshots ? 1 + surfaces.screens.length + surfaces.components.length : 0;
-    const estimatedTotal = 2 + (options.includeNodeIndex ? 1 : 0) + (options.includeRestJson ? 1 : 0) + previewCount + (options.includeImages ? imageHashes.length : 0) + svgCandidates.length + (options.includeViewer ? 2 : 0);
+    const canExportOverview = scope.mode === "selection" && scope.roots.length === 1 && !surfaces.screens.includes(scope.roots[0]) && !surfaces.components.includes(scope.roots[0]);
+    const previewCount = options.includeScreenshots ? (canExportOverview ? 1 : 0) + surfaces.screens.length + surfaces.components.length : 0;
+    const restSteps = options.includeRestJson ? scope.roots.length : 0;
+    const estimatedTotal = 2 + (options.includeNodeIndex ? 1 : 0) + restSteps + previewCount + (options.includeImages ? imageHashes.length : 0) + svgCandidates.length + (options.includeViewer ? 2 : 0);
     let completed = 0;
     const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
     const imageManifest = [];
@@ -523,27 +624,58 @@ Generated locally by FrameParcel ${EXPORTER_VERSION} on ${generatedAt}.
         exportedAt: generatedAt,
         fileName: figma.root.name,
         pageName: figma.currentPage.name,
-        selection: { id: root.id, name: root.name, type: root.type },
+        scope: {
+          mode: scope.mode,
+          id: scope.id,
+          name: scope.name,
+          type: scope.nodeType,
+          roots: scope.roots.map((root) => ({ id: root.id, name: root.name, type: root.type }))
+        },
         nodes: index
       });
       progress(label("\u5DF2\u5199\u5165\u5F00\u53D1\u5750\u6807\u7D22\u5F15", "Wrote the implementation node index"));
     }
     if (options.includeRestJson) {
-      try {
-        const rest = await root.exportAsync({ format: "JSON_REST_V1" });
-        postJson("design/rest-v1.json", rest);
-      } catch (error) {
-        postJson("design/rest-v1-error.json", { message: error instanceof Error ? error.message : String(error) });
+      if (scope.mode === "selection" && scope.roots.length === 1) {
+        try {
+          const rest = await scope.roots[0].exportAsync({ format: "JSON_REST_V1" });
+          postJson("design/rest-v1.json", rest);
+        } catch (error) {
+          postJson("design/rest-v1-error.json", { message: error instanceof Error ? error.message : String(error) });
+        }
+        progress(label("\u5DF2\u5199\u5165\u5B8C\u6574 REST V1 \u5F52\u6863", "Wrote the REST V1 archive"));
+      } else {
+        const roots = [];
+        for (let position = 0; position < scope.roots.length; position += 1) {
+          const root = scope.roots[position];
+          try {
+            roots.push({ id: root.id, name: root.name, type: root.type, data: await root.exportAsync({ format: "JSON_REST_V1" }) });
+          } catch (error) {
+            roots.push({ id: root.id, name: root.name, type: root.type, error: error instanceof Error ? error.message : String(error) });
+          }
+          progress(label(
+            `REST V1 ${position + 1}/${scope.roots.length}\uFF1A${root.name}`,
+            `REST V1 ${position + 1}/${scope.roots.length}: ${root.name}`
+          ));
+        }
+        postJson("design/rest-v1.json", {
+          exporterVersion: EXPORTER_VERSION,
+          exportedAt: generatedAt,
+          scope: { mode: scope.mode, id: scope.id, name: scope.name, type: scope.nodeType },
+          roots
+        });
       }
-      progress(label("\u5DF2\u5199\u5165\u5B8C\u6574 REST V1 \u5F52\u6863", "Wrote the REST V1 archive"));
     }
     if (options.includeScreenshots) {
-      const overviewWidth = Math.min(4096, Math.max(1, Math.round(root.width)));
-      const overviewPath = `screens/00-${sanitizeFilename(root.name, "selection")}-overview.png`;
-      const overview = await root.exportAsync({ format: "PNG", constraint: { type: "WIDTH", value: overviewWidth } });
-      postFile(overviewPath, overview);
-      previews.push({ nodeId: root.id, name: `${root.name} overview`, nodeType: root.type, width: root.width, height: root.height, path: overviewPath, kind: "overview" });
-      progress(label("\u5DF2\u5BFC\u51FA\u603B\u89C8\u56FE", "Exported the overview"));
+      if (canExportOverview) {
+        const root = scope.roots[0];
+        const overviewWidth = Math.min(4096, Math.max(1, Math.round(root.width)));
+        const overviewPath = `screens/00-${sanitizeFilename(root.name, "selection")}-overview.png`;
+        const overview = await root.exportAsync({ format: "PNG", constraint: { type: "WIDTH", value: overviewWidth } });
+        postFile(overviewPath, overview);
+        previews.push({ nodeId: root.id, name: `${root.name} overview`, nodeType: root.type, width: root.width, height: root.height, path: overviewPath, kind: "overview" });
+        progress(label("\u5DF2\u5BFC\u51FA\u603B\u89C8\u56FE", "Exported the overview"));
+      }
       for (let position = 0; position < surfaces.screens.length; position += 1) {
         const screen = surfaces.screens[position];
         const path = `screens/${String(position + 1).padStart(2, "0")}-${sanitizeFilename(screen.name)}.png`;
@@ -608,19 +740,33 @@ Generated locally by FrameParcel ${EXPORTER_VERSION} on ${generatedAt}.
     postJson("assets/manifest.json", {
       exporterVersion: EXPORTER_VERSION,
       preset: options.preset,
-      selectedNode: { id: root.id, name: root.name, type: root.type, width: root.width, height: root.height },
+      scope: { mode: scope.mode, id: scope.id, name: scope.name, type: scope.nodeType },
+      selectedNodes: scope.roots.map((root) => ({
+        id: root.id,
+        name: root.name,
+        type: root.type,
+        width: root.width,
+        height: root.height
+      })),
+      selectedNode: scope.roots.length === 1 ? {
+        id: scope.roots[0].id,
+        name: scope.roots[0].name,
+        type: scope.roots[0].type,
+        width: scope.roots[0].width,
+        height: scope.roots[0].height
+      } : void 0,
       previews,
       images: imageManifest,
       svg: svgManifest
     });
     progress(label("\u5DF2\u5199\u5165\u4EA4\u4ED8\u6E05\u5355", "Wrote the handoff manifest"));
     if (options.includeViewer) {
-      postFile("index.html", strToU8(buildViewerHtml(root, previews, generatedAt)));
+      postFile("index.html", strToU8(buildViewerHtml(scope, previews, generatedAt)));
       progress(label("\u5DF2\u751F\u6210\u672C\u5730\u6D4F\u89C8\u9875", "Generated the local browser"));
-      postFile("HANDOFF.md", strToU8(buildHandoffMarkdown(root, options, previews, entries.length, generatedAt)));
+      postFile("HANDOFF.md", strToU8(buildHandoffMarkdown(scope, options, previews, entries.length, generatedAt)));
       progress(label("\u5DF2\u751F\u6210\u4EA4\u4ED8\u8BF4\u660E", "Generated the handoff guide"));
     }
-    const filename = `${sanitizeFilename(root.name, "figma-design")}-handoff.zip`;
+    const filename = `${sanitizeFilename(scope.name, "figma-design")}-handoff.zip`;
     figma.ui.postMessage({
       type: "export-complete",
       filename,
@@ -633,7 +779,8 @@ Generated locally by FrameParcel ${EXPORTER_VERSION} on ${generatedAt}.
         svgCandidates: options.includeSvg ? svgCandidates.length : 0
       },
       summary: [
-        `Selection: ${root.name} (${root.id})`,
+        `Scope: ${scope.mode} \xB7 ${scope.name} (${scope.id})`,
+        `Top-level roots: ${scope.roots.length}`,
         `Preset: ${options.preset}`,
         `Nodes: ${entries.length}`,
         `Screens: ${options.includeScreenshots ? surfaces.screens.length : 0}`,
@@ -647,13 +794,13 @@ Generated locally by FrameParcel ${EXPORTER_VERSION} on ${generatedAt}.
   }
   figma.ui.onmessage = async (message) => {
     if (message.type !== "export" || !message.options) return;
-    const root = selectedRoot();
-    if (!root) {
-      figma.ui.postMessage({ type: "export-error", message: "\u9009\u62E9\u5DF2\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u9009\u62E9\u4E00\u4E2A\u8282\u70B9\u3002" });
+    const scope = resolveScope(message.options.scope);
+    if (!scope) {
+      figma.ui.postMessage({ type: "export-error", message: "\u5BFC\u51FA\u8303\u56F4\u5DF2\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u9009\u62E9\u56FE\u5C42\u6216\u5F53\u524D Page\u3002" });
       return;
     }
     try {
-      await exportPackage(root, message.options);
+      await exportPackage(scope, message.options);
     } catch (error) {
       figma.ui.postMessage({ type: "export-error", message: `\u5BFC\u51FA\u5931\u8D25\uFF1A${error instanceof Error ? error.message : String(error)}` });
     }
