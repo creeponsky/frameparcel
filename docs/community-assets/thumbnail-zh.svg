@@ -9,9 +9,9 @@
   <path d="M151 134L154.5 137L158 134" stroke="#1ABCFE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
   <text x="196" y="134" fill="#171717" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="750">FrameParcel</text>
 
-  <text x="112" y="330" fill="#171717" font-family="Inter, Arial, sans-serif" font-size="82" font-weight="750" letter-spacing="-3">Export once.</text>
-  <text x="112" y="424" fill="#171717" font-family="Inter, Arial, sans-serif" font-size="82" font-weight="750" letter-spacing="-3">Hand off anywhere.</text>
-  <text x="116" y="490" fill="#666660" font-family="Inter, Arial, sans-serif" font-size="29">Figma context your coding agent can actually inspect.</text>
+  <text x="112" y="330" fill="#171717" font-family="PingFang SC, Arial, sans-serif" font-size="80" font-weight="700" letter-spacing="-2">导出一次，</text>
+  <text x="112" y="424" fill="#171717" font-family="PingFang SC, Arial, sans-serif" font-size="80" font-weight="700" letter-spacing="-2">交给任何 Coding Agent。</text>
+  <text x="116" y="490" fill="#666660" font-family="PingFang SC, Arial, sans-serif" font-size="29">把 Figma 设计、素材和实现上下文装进一个本地包。</text>
 
   <g transform="translate(112 626)">
     <rect width="390" height="278" rx="26" fill="white" stroke="#DEDED8" stroke-width="2"/>
@@ -26,8 +26,8 @@
     <rect x="195" y="57" width="120" height="11" rx="5.5" fill="#F24E1E"/>
     <rect x="195" y="77" width="88" height="9" rx="4.5" fill="#A259FF"/>
     <rect x="195" y="96" width="104" height="9" rx="4.5" fill="#1ABCFE"/>
-    <text x="44" y="210" fill="#171717" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Figma selection</text>
-    <text x="44" y="243" fill="#70706A" font-family="Inter, Arial, sans-serif" font-size="19">Frames, assets, styles, geometry</text>
+    <text x="44" y="210" fill="#171717" font-family="PingFang SC, Arial, sans-serif" font-size="28" font-weight="700">Figma 设计稿</text>
+    <text x="44" y="243" fill="#70706A" font-family="PingFang SC, Arial, sans-serif" font-size="19">页面、素材、样式和布局数据</text>
   </g>
 
   <path d="M540 765H646" stroke="#999993" stroke-width="4" stroke-linecap="round"/>
@@ -41,7 +41,7 @@
     <circle cx="145.5" cy="78" r="14" fill="#A259FF"/>
     <path d="M145.5 107V145" stroke="white" stroke-width="9" stroke-linecap="round" stroke-dasharray="3 14"/>
     <path d="M134 153L145.5 164L157 153" stroke="#1ABCFE" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="109" y="254" fill="#171717" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">Local ZIP</text>
+    <text x="109" y="254" fill="#171717" text-anchor="middle" font-family="PingFang SC, Arial, sans-serif" font-size="24" font-weight="700">本地 ZIP</text>
   </g>
 
   <path d="M948 765H1054" stroke="#999993" stroke-width="4" stroke-linecap="round"/>
@@ -62,8 +62,5 @@
     </g>
   </g>
 
-  <g transform="translate(112 974)">
-    <circle cx="10" cy="10" r="10" fill="#0ACF83"/>
-    <text x="34" y="18" fill="#555550" font-family="Inter, Arial, sans-serif" font-size="23" font-weight="600">No token · No network access · Open source</text>
-  </g>
+  <g transform="translate(112 974)"><circle cx="10" cy="10" r="10" fill="#0ACF83"/><text x="34" y="18" fill="#555550" font-family="PingFang SC, Arial, sans-serif" font-size="23" font-weight="600">无需 Token · 无网络权限 · 开源</text></g>
 </svg>

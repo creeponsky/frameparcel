@@ -18,6 +18,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run assets:i18n
+      - run: git diff --exit-code -- docs/community-assets
       - run: npm run check
       - run: npm run build
       - run: npm run test:sandbox

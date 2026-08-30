@@ -7,5 +7,7 @@
 - Add development, visual review, complete archive, and custom presets.
 - Export a browsable local gallery, implementation node index, original image fills, deduplicated SVGs, and a handoff guide.
 - Add Figma Light and Dark Mode support.
+- Add complete Chinese and English UI localization with a persisted in-plugin language switch.
 - Run entirely locally with no network access, analytics, account, or API token.
 - Add sandbox coverage for Figma runtimes without `TextEncoder` and `TextDecoder`.
+- Add bilingual Community media, publishing instructions, and tool-neutral repository guidance for coding agents.
