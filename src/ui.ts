@@ -1,9 +1,19 @@
 import { strToU8, zipSync } from "fflate";
 
 type Receipt = { preset: string; nodes: number; screens: number; components: number; images: number; svgCandidates: number };
-type ScopeSummary = { valid: boolean; name?: string; nodeType?: string; rootCount?: number; screenCount?: number; componentCount?: number; reason?: string };
+type ReasonCode = "EMPTY_SELECTION" | "INVALID_SELECTION" | "EMPTY_PAGE";
+type ScopeSummary = {
+  valid: boolean;
+  name?: string;
+  nodeType?: string;
+  rootCount?: number;
+  screenCount?: number;
+  componentCount?: number;
+  reasonCode?: ReasonCode;
+};
 
 type PluginMessage =
+  | { type: "initialize"; locale: Locale | null; selection: ScopeSummary; page: ScopeSummary }
   | { type: "selection"; selection: ScopeSummary; page: ScopeSummary }
   | { type: "export-start"; total: number }
   | { type: "export-file"; path: string; bytes: Uint8Array | number[] }
@@ -15,8 +25,43 @@ type Preset = "developer" | "review" | "archive" | "custom";
 type Locale = "zh" | "en";
 type ScopeMode = "selection" | "page";
 
-const locale: Locale = navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
 const copy = {
+  en: {
+    tagline: "Pack design, assets, and implementation context into one inspectable handoff.",
+    "local-only": "LOCAL ONLY",
+    "purpose-label": "What will this package be used for?",
+    "scope-label": "Export scope",
+    "scope-selection-title": "Current selection",
+    "scope-selection-copy": "One node or multiple selected frames, sections, and components.",
+    "scope-page-title": "Current Page",
+    "scope-page-copy": "Export visible top-level content without wrapping it in another frame.",
+    "developer-title": "Development or AI",
+    "developer-copy": "Previews, geometry, original images, smart SVGs, and a browsable index.html.",
+    recommended: "RECOMMENDED",
+    "review-title": "Visual review",
+    "review-copy": "Page and component previews plus a local browser. The smallest package.",
+    "archive-title": "Complete archive",
+    "archive-copy": "Adds Figma REST V1 data for debugging and long-term preservation.",
+    "custom-summary": "Customize contents",
+    "node-index-label": "Implementation node index<small>Relative and absolute geometry, type, colors, effects, components, and variables.</small>",
+    "screenshots-label": "Screen and component 2× PNGs<small>Full surfaces go to screens; small top-level fragments go to components.</small>",
+    "images-label": "Original bitmap assets<small>Preserves image-fill bytes instead of recropping preview screenshots.</small>",
+    "svg-label": "Smart SVG assets<small>Exports visible icon compositions while skipping hidden layers and duplicates.</small>",
+    "viewer-label": "Local browser and handoff guide<small>Review the package without special tools and explain it to developers and agents.</small>",
+    "rest-label": "Figma REST V1 structure<small>Complete but usually redundant. Recommended only for full archives.</small>",
+    export: "Export handoff package",
+    "receipt-title": "Handoff package ready",
+    loading: "Reading selection…",
+    emptySelectionTitle: "Select one or more design nodes",
+    emptyPageTitle: "Nothing exportable on this Page",
+    emptySelectionReason: "Select a frame, section, component, or other exportable design node.",
+    invalidSelectionReason: "The selection contains a node that Figma cannot export.",
+    emptyPageReason: "This Page has no visible top-level design content.",
+    preparing: "Preparing export…",
+    compressing: "Compressing handoff package…",
+    downloadStarted: "Download started",
+    zipFailed: "ZIP creation failed",
+  },
   zh: {
     tagline: "把设计、素材和实现上下文装进一个可检查的本地交付包。",
     "local-only": "仅本机",
@@ -33,26 +78,31 @@ const copy = {
     "review-copy": "仅导出页面与组件预览，加一份本地浏览页；体积最小。",
     "archive-title": "完整归档",
     "archive-copy": "在开发包基础上加入 Figma REST V1 原始结构，适合排查与长期留存。",
-    "custom-summary": "自定义内容（选择后将切换到“自定义”）",
+    "custom-summary": "自定义内容",
     "node-index-label": "开发坐标索引<small>相对/绝对坐标、字体、颜色、效果、组件和变量引用。</small>",
     "screenshots-label": "页面与组件 2× PNG<small>自动把完整页面放入 screens，小型顶层素材放入 components。</small>",
     "images-label": "原始位图<small>保留图片填充的原始字节，不从预览截图二次裁切。</small>",
     "svg-label": "精简 SVG<small>导出可见的完整图标组合，跳过隐藏层、内部路径和重复文件。</small>",
-    "viewer-label": "本地浏览页与交付说明<small>无需安装工具即可查看页面清单，并告诉开发者如何使用包内文件。</small>",
+    "viewer-label": "本地浏览页与交付说明<small>无需安装工具即可查看页面清单，并告诉开发者或 AI 如何使用包内文件。</small>",
     "rest-label": "Figma REST V1 原始结构<small>信息完整但通常与坐标索引重复，默认仅用于完整归档。</small>",
     export: "导出交付包",
     "receipt-title": "交付包已生成",
+    loading: "正在读取选择…",
+    emptySelectionTitle: "请选择一个或多个设计节点",
+    emptyPageTitle: "当前 Page 无可导出内容",
+    emptySelectionReason: "请选择 Frame、Section、组件或其他可导出的设计节点。",
+    invalidSelectionReason: "当前选择中包含 Figma 无法导出的节点。",
+    emptyPageReason: "当前 Page 没有可见的顶层设计内容。",
+    preparing: "准备导出…",
+    compressing: "正在压缩交付包…",
+    downloadStarted: "下载已开始",
+    zipFailed: "ZIP 生成失败",
   },
 } as const;
 
-if (locale === "zh") {
-  for (const [id, value] of Object.entries(copy.zh)) {
-    const element = document.getElementById(id);
-    if (element) element.innerHTML = value;
-  }
-}
-document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+type CopyKey = keyof typeof copy.en;
 
+const app = document.querySelector<HTMLDivElement>("#app")!;
 const selectionName = document.querySelector<HTMLDivElement>("#selection-name")!;
 const selectionMeta = document.querySelector<HTMLDivElement>("#selection-meta")!;
 const exportButton = document.querySelector<HTMLButtonElement>("#export")!;
@@ -62,14 +112,26 @@ const status = document.querySelector<HTMLDivElement>("#status")!;
 const receipt = document.querySelector<HTMLDivElement>("#receipt")!;
 const receiptCopy = document.querySelector<HTMLSpanElement>("#receipt-copy")!;
 const files: Record<string, Uint8Array> = {};
+let locale: Locale = navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
+let initialized = false;
 let currentPreset: Preset = "developer";
 let currentScope: ScopeMode = "selection";
 let latestScopes: Record<ScopeMode, ScopeSummary> = {
-  selection: { valid: false },
-  page: { valid: false },
+  selection: { valid: false, reasonCode: "EMPTY_SELECTION" },
+  page: { valid: false, reasonCode: "EMPTY_PAGE" },
 };
 
 const optionIds = ["node-index", "rest-json", "screenshots", "images", "svg", "viewer"] as const;
+
+function t(key: CopyKey): string {
+  return copy[locale][key];
+}
+
+function reveal(): void {
+  initialized = true;
+  app.classList.add("ready");
+  app.setAttribute("aria-busy", "false");
+}
 
 function checked(id: typeof optionIds[number]): boolean {
   return document.querySelector<HTMLInputElement>(`#${id}`)!.checked;
@@ -77,6 +139,48 @@ function checked(id: typeof optionIds[number]): boolean {
 
 function setChecked(id: typeof optionIds[number], value: boolean): void {
   document.querySelector<HTMLInputElement>(`#${id}`)!.checked = value;
+}
+
+function scopeReason(summary: ScopeSummary): string {
+  switch (summary.reasonCode) {
+    case "INVALID_SELECTION": return t("invalidSelectionReason");
+    case "EMPTY_PAGE": return t("emptyPageReason");
+    case "EMPTY_SELECTION":
+    default: return t("emptySelectionReason");
+  }
+}
+
+function renderScope(): void {
+  const summary = latestScopes[currentScope];
+  if (summary.valid) {
+    selectionName.textContent = summary.nodeType === "SELECTION"
+      ? (locale === "zh" ? `已选择 ${summary.rootCount ?? 0} 个节点` : `${summary.rootCount ?? 0} selected nodes`)
+      : (summary.name ?? (currentScope === "page" ? "Current Page" : "Selection"));
+    selectionMeta.textContent = locale === "zh"
+      ? `${summary.nodeType} · ${summary.rootCount ?? 0} 个顶层节点 · 识别 ${summary.screenCount ?? 0} 个页面 / ${summary.componentCount ?? 0} 个组件`
+      : `${summary.nodeType} · ${summary.rootCount ?? 0} top-level nodes · ${summary.screenCount ?? 0} screens / ${summary.componentCount ?? 0} components`;
+    exportButton.disabled = false;
+  } else {
+    selectionName.textContent = currentScope === "page" ? t("emptyPageTitle") : t("emptySelectionTitle");
+    selectionMeta.textContent = scopeReason(summary);
+    exportButton.disabled = true;
+  }
+}
+
+function applyLocale(next: Locale, persist = false): void {
+  locale = next;
+  document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+  for (const [id, value] of Object.entries(copy[locale])) {
+    const element = document.getElementById(id);
+    if (element) element.innerHTML = value;
+  }
+  document.querySelectorAll<HTMLButtonElement>("[data-locale]").forEach((button) => {
+    const active = button.dataset.locale === locale;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  renderScope();
+  if (persist) parent.postMessage({ pluginMessage: { type: "set-locale", locale } }, "*");
 }
 
 function applyPreset(preset: Exclude<Preset, "custom">): void {
@@ -92,31 +196,19 @@ function markCustom(): void {
   document.querySelectorAll<HTMLInputElement>('input[name="preset"]').forEach((input) => { input.checked = false; });
 }
 
+document.querySelectorAll<HTMLButtonElement>("[data-locale]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const next = button.dataset.locale;
+    if (next === "zh" || next === "en") applyLocale(next, true);
+  });
+});
+
 document.querySelectorAll<HTMLInputElement>('input[name="preset"]').forEach((input) => {
   input.addEventListener("change", () => {
     if (input.checked) applyPreset(input.value as Exclude<Preset, "custom">);
   });
 });
 optionIds.forEach((id) => document.querySelector<HTMLInputElement>(`#${id}`)!.addEventListener("change", markCustom));
-
-function renderScope(): void {
-  const summary = latestScopes[currentScope];
-  if (summary.valid) {
-    selectionName.textContent = summary.name ?? (currentScope === "page" ? "Current Page" : "Selection");
-    selectionMeta.textContent = locale === "zh"
-      ? `${summary.nodeType} · ${summary.rootCount ?? 0} 个顶层节点 · 识别 ${summary.screenCount ?? 0} 个页面 / ${summary.componentCount ?? 0} 个组件`
-      : `${summary.nodeType} · ${summary.rootCount ?? 0} top-level nodes · ${summary.screenCount ?? 0} screens / ${summary.componentCount ?? 0} components`;
-    exportButton.disabled = false;
-  } else {
-    selectionName.textContent = currentScope === "page"
-      ? (locale === "zh" ? "当前 Page 无可导出内容" : "Nothing exportable on this Page")
-      : (locale === "zh" ? "请选择一个或多个设计节点" : "Select one or more design nodes");
-    selectionMeta.textContent = locale === "zh"
-      ? (summary.reason ?? "当前范围无效")
-      : (summary.reason ?? "The current scope is not exportable.");
-    exportButton.disabled = true;
-  }
-}
 
 document.querySelectorAll<HTMLInputElement>('input[name="scope"]').forEach((input) => {
   input.addEventListener("change", () => {
@@ -125,6 +217,16 @@ document.querySelectorAll<HTMLInputElement>('input[name="scope"]').forEach((inpu
     renderScope();
   });
 });
+
+function updateScopes(selection: ScopeSummary, page: ScopeSummary): void {
+  latestScopes = { selection, page };
+  if (!latestScopes.selection.valid && latestScopes.page.valid) {
+    currentScope = "page";
+    const pageInput = document.querySelector<HTMLInputElement>('input[name="scope"][value="page"]');
+    if (pageInput) pageInput.checked = true;
+  }
+  renderScope();
+}
 
 function setStatus(message: string, error = false): void {
   status.textContent = message;
@@ -142,7 +244,7 @@ exportButton.addEventListener("click", () => {
   progress.style.display = "block";
   receipt.style.display = "none";
   progressBar.style.width = "0%";
-  setStatus(locale === "zh" ? "准备导出…" : "Preparing export…");
+  setStatus(t("preparing"));
   for (const key of Object.keys(files)) delete files[key];
   parent.postMessage({
     pluginMessage: {
@@ -167,14 +269,19 @@ window.onmessage = (event: MessageEvent<{ pluginMessage: PluginMessage }>) => {
   const message = event.data.pluginMessage;
   if (!message) return;
 
+  if (message.type === "initialize") {
+    updateScopes(message.selection, message.page);
+    applyLocale(message.locale ?? locale);
+    reveal();
+    return;
+  }
+
   if (message.type === "selection") {
-    latestScopes = { selection: message.selection, page: message.page };
-    if (!latestScopes.selection.valid && latestScopes.page.valid) {
-      currentScope = "page";
-      const pageInput = document.querySelector<HTMLInputElement>('input[name="scope"][value="page"]');
-      if (pageInput) pageInput.checked = true;
+    updateScopes(message.selection, message.page);
+    if (!initialized) {
+      applyLocale(locale);
+      reveal();
     }
-    renderScope();
     return;
   }
 
@@ -196,7 +303,7 @@ window.onmessage = (event: MessageEvent<{ pluginMessage: PluginMessage }>) => {
   }
 
   if (message.type === "export-complete") {
-    setStatus(locale === "zh" ? "正在压缩交付包…" : "Compressing handoff package…");
+    setStatus(t("compressing"));
     try {
       files["EXPORT_SUMMARY.txt"] = strToU8(message.summary);
       const archive = zipSync(files, { level: 6 });
@@ -208,13 +315,13 @@ window.onmessage = (event: MessageEvent<{ pluginMessage: PluginMessage }>) => {
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 5_000);
       progressBar.style.width = "100%";
-      setStatus(locale === "zh" ? "下载已开始" : "Download started");
+      setStatus(t("downloadStarted"));
       receipt.style.display = "block";
       receiptCopy.textContent = locale === "zh"
         ? `${message.receipt.screens} 个页面、${message.receipt.components} 个组件、${message.receipt.images} 张原图 · ${Object.keys(files).length} 个文件 · ${formatBytes(archive.byteLength)}`
         : `${message.receipt.screens} screens, ${message.receipt.components} components, ${message.receipt.images} original images · ${Object.keys(files).length} files · ${formatBytes(archive.byteLength)}`;
     } catch (error) {
-      setStatus(`${locale === "zh" ? "ZIP 生成失败" : "ZIP creation failed"}: ${error instanceof Error ? error.message : String(error)}`, true);
+      setStatus(`${t("zipFailed")}: ${error instanceof Error ? error.message : String(error)}`, true);
     } finally {
       exportButton.disabled = false;
     }
@@ -226,3 +333,14 @@ window.onmessage = (event: MessageEvent<{ pluginMessage: PluginMessage }>) => {
     exportButton.disabled = false;
   }
 };
+
+// The main sandbox normally initializes immediately. This fallback keeps the
+// standalone UI preview useful without exposing a half-translated interface.
+setTimeout(() => {
+  if (!initialized) {
+    applyLocale(locale);
+    selectionName.textContent = t("loading");
+    selectionMeta.textContent = "";
+    reveal();
+  }
+}, 250);

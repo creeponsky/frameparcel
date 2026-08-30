@@ -1,6 +1,7 @@
 import { strToU8 } from "fflate";
 
 type ExportPreset = "developer" | "review" | "archive" | "custom";
+type InterfaceLocale = "zh" | "en";
 
 type ExportOptions = {
   preset: ExportPreset;
@@ -113,13 +114,12 @@ function resolveScope(mode: ExportOptions["scope"]): ExportScope | null {
   };
 }
 
-function notifySelection(): void {
+function scopeMessage(): { selection: Record<string, unknown>; page: Record<string, unknown> } {
   const selectionScope = resolveScope("selection");
   const pageScope = resolveScope("page");
   const selectionSurfaces = selectionScope ? classifyScope(selectionScope) : { screens: [], components: [] };
   const pageSurfaces = pageScope ? classifyScope(pageScope) : { screens: [], components: [] };
-  figma.ui.postMessage({
-    type: "selection",
+  return {
     selection: selectionScope
       ? {
           valid: true,
@@ -131,9 +131,7 @@ function notifySelection(): void {
         }
       : {
           valid: false,
-          reason: figma.currentPage.selection.length === 0
-            ? "请先选择一个或多个 Frame、Section、Component 或图层。"
-            : "当前选择中包含不可导出的节点。",
+          reasonCode: figma.currentPage.selection.length === 0 ? "EMPTY_SELECTION" : "INVALID_SELECTION",
         },
     page: pageScope
       ? {
@@ -144,12 +142,26 @@ function notifySelection(): void {
           screenCount: pageSurfaces.screens.length,
           componentCount: pageSurfaces.components.length,
         }
-      : { valid: false, reason: "当前 Page 没有可导出的可见内容。" },
-  });
+      : { valid: false, reasonCode: "EMPTY_PAGE" },
+  };
+}
+
+function notifySelection(): void {
+  figma.ui.postMessage({ type: "selection", ...scopeMessage() });
+}
+
+async function initializeUI(): Promise<void> {
+  let storedLocale: InterfaceLocale | null = null;
+  try {
+    const stored = await figma.clientStorage.getAsync("frameparcel.locale");
+    if (stored === "zh" || stored === "en") storedLocale = stored;
+  } catch {
+    // A missing preference must never block the exporter.
+  }
+  figma.ui.postMessage({ type: "initialize", locale: storedLocale, ...scopeMessage() });
 }
 
 figma.on("selectionchange", notifySelection);
-notifySelection();
 
 function sanitizeFilename(value: string, fallback = "node"): string {
   const normalized = value
@@ -688,16 +700,35 @@ async function exportPackage(scope: ExportScope, options: ExportOptions): Promis
   });
 }
 
-figma.ui.onmessage = async (message: { type?: string; options?: ExportOptions }) => {
+figma.ui.onmessage = async (message: { type?: string; options?: ExportOptions; locale?: InterfaceLocale }) => {
+  if (message.type === "set-locale" && (message.locale === "zh" || message.locale === "en")) {
+    try {
+      await figma.clientStorage.setAsync("frameparcel.locale", message.locale);
+    } catch {
+      // The selected language still applies for this run even if persistence is unavailable.
+    }
+    return;
+  }
   if (message.type !== "export" || !message.options) return;
   const scope = resolveScope(message.options.scope);
   if (!scope) {
-    figma.ui.postMessage({ type: "export-error", message: "导出范围已变化，请重新选择图层或当前 Page。" });
+    figma.ui.postMessage({
+      type: "export-error",
+      message: message.options.locale === "zh"
+        ? "导出范围已变化，请重新选择图层或当前 Page。"
+        : "The export scope changed. Select the layers or current Page again.",
+    });
     return;
   }
   try {
     await exportPackage(scope, message.options);
   } catch (error) {
-    figma.ui.postMessage({ type: "export-error", message: `导出失败：${error instanceof Error ? error.message : String(error)}` });
+    const detail = error instanceof Error ? error.message : String(error);
+    figma.ui.postMessage({
+      type: "export-error",
+      message: message.options.locale === "zh" ? `导出失败：${detail}` : `Export failed: ${detail}`,
+    });
   }
 };
+
+void initializeUI();

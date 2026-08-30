@@ -219,13 +219,12 @@
       roots
     };
   }
-  function notifySelection() {
+  function scopeMessage() {
     const selectionScope = resolveScope("selection");
     const pageScope = resolveScope("page");
     const selectionSurfaces = selectionScope ? classifyScope(selectionScope) : { screens: [], components: [] };
     const pageSurfaces = pageScope ? classifyScope(pageScope) : { screens: [], components: [] };
-    figma.ui.postMessage({
-      type: "selection",
+    return {
       selection: selectionScope ? {
         valid: true,
         name: selectionScope.name,
@@ -235,7 +234,7 @@
         componentCount: selectionSurfaces.components.length
       } : {
         valid: false,
-        reason: figma.currentPage.selection.length === 0 ? "\u8BF7\u5148\u9009\u62E9\u4E00\u4E2A\u6216\u591A\u4E2A Frame\u3001Section\u3001Component \u6216\u56FE\u5C42\u3002" : "\u5F53\u524D\u9009\u62E9\u4E2D\u5305\u542B\u4E0D\u53EF\u5BFC\u51FA\u7684\u8282\u70B9\u3002"
+        reasonCode: figma.currentPage.selection.length === 0 ? "EMPTY_SELECTION" : "INVALID_SELECTION"
       },
       page: pageScope ? {
         valid: true,
@@ -244,11 +243,22 @@
         rootCount: pageScope.roots.length,
         screenCount: pageSurfaces.screens.length,
         componentCount: pageSurfaces.components.length
-      } : { valid: false, reason: "\u5F53\u524D Page \u6CA1\u6709\u53EF\u5BFC\u51FA\u7684\u53EF\u89C1\u5185\u5BB9\u3002" }
-    });
+      } : { valid: false, reasonCode: "EMPTY_PAGE" }
+    };
+  }
+  function notifySelection() {
+    figma.ui.postMessage({ type: "selection", ...scopeMessage() });
+  }
+  async function initializeUI() {
+    let storedLocale = null;
+    try {
+      const stored = await figma.clientStorage.getAsync("frameparcel.locale");
+      if (stored === "zh" || stored === "en") storedLocale = stored;
+    } catch {
+    }
+    figma.ui.postMessage({ type: "initialize", locale: storedLocale, ...scopeMessage() });
   }
   figma.on("selectionchange", notifySelection);
-  notifySelection();
   function sanitizeFilename(value, fallback = "node") {
     const normalized = value.normalize("NFKC").replace(/[\\/:*?"<>|\u0000-\u001f]/g, "-").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 90);
     return normalized || fallback;
@@ -793,16 +803,31 @@ Generated locally by FrameParcel ${EXPORTER_VERSION} on ${generatedAt}.
     });
   }
   figma.ui.onmessage = async (message) => {
+    if (message.type === "set-locale" && (message.locale === "zh" || message.locale === "en")) {
+      try {
+        await figma.clientStorage.setAsync("frameparcel.locale", message.locale);
+      } catch {
+      }
+      return;
+    }
     if (message.type !== "export" || !message.options) return;
     const scope = resolveScope(message.options.scope);
     if (!scope) {
-      figma.ui.postMessage({ type: "export-error", message: "\u5BFC\u51FA\u8303\u56F4\u5DF2\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u9009\u62E9\u56FE\u5C42\u6216\u5F53\u524D Page\u3002" });
+      figma.ui.postMessage({
+        type: "export-error",
+        message: message.options.locale === "zh" ? "\u5BFC\u51FA\u8303\u56F4\u5DF2\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u9009\u62E9\u56FE\u5C42\u6216\u5F53\u524D Page\u3002" : "The export scope changed. Select the layers or current Page again."
+      });
       return;
     }
     try {
       await exportPackage(scope, message.options);
     } catch (error) {
-      figma.ui.postMessage({ type: "export-error", message: `\u5BFC\u51FA\u5931\u8D25\uFF1A${error instanceof Error ? error.message : String(error)}` });
+      const detail = error instanceof Error ? error.message : String(error);
+      figma.ui.postMessage({
+        type: "export-error",
+        message: message.options.locale === "zh" ? `\u5BFC\u51FA\u5931\u8D25\uFF1A${detail}` : `Export failed: ${detail}`
+      });
     }
   };
+  void initializeUI();
 })();

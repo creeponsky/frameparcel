@@ -5,6 +5,7 @@ import vm from "node:vm";
 const messages = [];
 let pluginMessageHandler;
 let selectionChangeHandler;
+let storedLocale = "zh";
 
 const rootNode = {
   id: "1:1",
@@ -131,6 +132,14 @@ const figmaMock = {
     },
   },
   showUI() {},
+  clientStorage: {
+    async getAsync(key) {
+      return key === "frameparcel.locale" ? storedLocale : undefined;
+    },
+    async setAsync(key, value) {
+      if (key === "frameparcel.locale") storedLocale = value;
+    },
+  },
   on(event, handler) {
     if (event === "selectionchange") selectionChangeHandler = handler;
   },
@@ -165,11 +174,16 @@ vm.runInNewContext(code, {
   RegExp,
 });
 
+await new Promise((resolve) => setImmediate(resolve));
+
 assert.equal(typeof pluginMessageHandler, "function", "plugin UI handler was not installed");
 assert.equal(typeof selectionChangeHandler, "function", "selection change handler was not installed");
-assert(messages.some((message) => message.type === "selection" && message.selection.valid && message.page.valid));
-const initialScopeMessage = messages.findLast((message) => message.type === "selection");
+assert(messages.some((message) => message.type === "initialize" && message.locale === "zh" && message.selection.valid && message.page.valid));
+const initialScopeMessage = messages.findLast((message) => message.type === "initialize" || message.type === "selection");
 assert.equal(initialScopeMessage.page.rootCount, 2, "Page scope should exclude hidden top-level roots");
+
+await pluginMessageHandler({ type: "set-locale", locale: "en" });
+assert.equal(storedLocale, "en", "language choice should persist in Figma client storage");
 
 const beforeSingleExport = messages.length;
 await pluginMessageHandler({
