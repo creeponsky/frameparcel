@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible FrameParcel export or UI problem.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not upload private Figma files or exported design packages. A minimal recreated sample is best.
+  - type: input
+    id: version
+    attributes:
+      label: FrameParcel version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Export scope
+      options:
+        - Single selection
+        - Multiple selection
+        - Container
+        - Current Page
+    validations:
+      required: true
+  - type: dropdown
+    id: preset
+    attributes:
+      label: Preset
+      options:
+        - Development or AI
+        - Visual review
+        - Complete archive
+        - Custom
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Include the node types, expected result, actual result, and any visible error text.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Figma Desktop and operating system
+      placeholder: Figma Desktop 125.0, macOS 15.6
+    validations:
+      required: true

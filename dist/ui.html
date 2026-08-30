@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        font-family: Inter, "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--figma-color-text, #1e1e1e);
+        background: var(--figma-color-bg, #fff);
+        color-scheme: light dark;
+      }
+      .figma-light { color-scheme: light; }
+      .figma-dark { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 16px; overflow-x: hidden; background: var(--figma-color-bg, #fff); }
+      .app { opacity: 0; transition: opacity .08s ease; }
+      .app.ready { opacity: 1; }
+      button, input { font: inherit; }
+      .header { position: relative; min-height: 62px; padding-right: 80px; }
+      .header > div:first-child { min-width: 0; }
+      .header-actions { position: absolute; top: 0; right: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+      h1 { margin: 0 0 4px; font-size: 17px; line-height: 1.35; letter-spacing: -.01em; }
+      .privacy {
+        flex: none; margin-top: 1px; padding: 4px 7px; border-radius: 5px;
+        color: var(--figma-color-text-success, #0b7a3e);
+        background: var(--figma-color-bg-success-tertiary, #e8f5ec);
+        font-size: 10px; font-weight: 600;
+      }
+      .locale-switch {
+        display: flex; padding: 2px; border: 1px solid var(--figma-color-border, #e5e5e5);
+        border-radius: 6px; background: var(--figma-color-bg-secondary, #f7f7f7);
+      }
+      .locale-button {
+        width: auto; height: 22px; min-width: 26px; padding: 0 6px; border: 0; border-radius: 4px;
+        color: var(--figma-color-text-secondary, #6b6b6b); background: transparent;
+        font-size: 9.5px; font-weight: 600; cursor: pointer;
+      }
+      .locale-button:hover { color: var(--figma-color-text, #1e1e1e); background: var(--figma-color-bg-hover, #efefef); }
+      .locale-button.active { color: var(--figma-color-text, #1e1e1e); background: var(--figma-color-bg, #fff); box-shadow: 0 1px 2px #00000014; }
+      .subtle { color: var(--figma-color-text-secondary, #6b6b6b); font-size: 11px; line-height: 1.45; }
+      .scope-switch { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px; margin: 14px 0 8px; }
+      .scope-option {
+        display: grid; grid-template-columns: 15px 1fr; gap: 7px; align-items: start;
+        min-width: 0;
+        padding: 9px; border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 8px;
+        background: var(--figma-color-bg, #fff); cursor: pointer;
+      }
+      .scope-option > span { min-width: 0; }
+      .scope-option:has(input:checked) {
+        border-color: var(--figma-color-border-selected, #0d99ff);
+        background: var(--figma-color-bg-selected-secondary, #edf7ff);
+      }
+      .scope-option input { width: 13px; height: 13px; margin: 2px 0 0; accent-color: var(--figma-color-bg-brand, #0d99ff); }
+      .scope-title { display: block; font-size: 11px; font-weight: 600; line-height: 1.3; }
+      .scope-copy { display: block; margin-top: 2px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 9px; line-height: 1.35; overflow-wrap: anywhere; }
+      .selection {
+        margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--figma-color-border, #e5e5e5);
+        border-radius: 8px; background: var(--figma-color-bg-secondary, #f7f7f7);
+      }
+      .selection-row { display: flex; align-items: center; gap: 10px; }
+      .selection-mark {
+        position: relative; width: 28px; height: 28px; flex: none;
+        border: 1px solid var(--figma-color-border-strong, #b3b3b3); border-radius: 6px;
+      }
+      .selection-mark::before, .selection-mark::after {
+        content: ""; position: absolute; background: var(--figma-color-icon-brand, #0d99ff); border-radius: 99px;
+      }
+      .selection-mark::before { width: 12px; height: 2px; left: 7px; top: 8px; }
+      .selection-mark::after { width: 8px; height: 2px; left: 7px; top: 16px; }
+      .selection strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; margin-bottom: 2px; }
+      .section-label { margin: 0 0 8px; font-size: 11px; font-weight: 600; }
+      .presets { display: grid; gap: 7px; }
+      .preset {
+        position: relative; display: grid; grid-template-columns: 18px 1fr auto; gap: 9px; align-items: start;
+        padding: 10px; border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 8px;
+        background: var(--figma-color-bg, #fff); cursor: pointer;
+      }
+      .preset:hover { background: var(--figma-color-bg-hover, #f5f5f5); }
+      .preset:has(input:checked) {
+        border-color: var(--figma-color-border-selected, #0d99ff);
+        box-shadow: inset 0 0 0 1px var(--figma-color-border-selected, #0d99ff);
+        background: var(--figma-color-bg-selected-secondary, #edf7ff);
+      }
+      .preset input { margin: 2px 0 0; width: 14px; height: 14px; accent-color: var(--figma-color-bg-brand, #0d99ff); }
+      .preset-title { display: block; font-size: 12px; font-weight: 600; line-height: 1.35; }
+      .preset-copy { display: block; margin-top: 2px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 10.5px; line-height: 1.4; }
+      .recommended { color: var(--figma-color-text-brand, #007be5); font-size: 9.5px; font-weight: 600; }
+      details { margin-top: 9px; border-top: 1px solid var(--figma-color-border, #e5e5e5); }
+      summary { padding: 10px 1px 5px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 10.5px; cursor: pointer; }
+      .advanced { display: grid; gap: 7px; padding: 4px 1px 2px; }
+      .advanced label { display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: start; font-size: 11px; }
+      .advanced input { width: 14px; height: 14px; margin: 1px 0 0; accent-color: var(--figma-color-bg-brand, #0d99ff); }
+      .advanced small { display: block; margin-top: 1px; color: var(--figma-color-text-tertiary, #8a8a8a); font-size: 9.5px; line-height: 1.35; }
+      .actions { margin-top: 14px; }
+      .actions > button {
+        width: 100%; height: 40px; border: 0; border-radius: 6px;
+        background: var(--figma-color-bg-brand, #0d99ff); color: var(--figma-color-text-onbrand, #fff);
+        font-size: 12px; font-weight: 600; cursor: pointer;
+      }
+      .actions > button:hover:not(:disabled) { background: var(--figma-color-bg-brand-hover, #0c8ce9); }
+      .actions > button:disabled { opacity: .42; cursor: default; }
+      .export-overlay {
+        position: fixed; inset: 0; z-index: 20; display: none; place-items: center; padding: 20px;
+        background: color-mix(in srgb, var(--figma-color-bg, #fff) 78%, transparent);
+        backdrop-filter: blur(5px);
+      }
+      .export-overlay.visible { display: grid; }
+      .export-dialog {
+        width: min(100%, 340px); padding: 20px; border: 1px solid var(--figma-color-border, #e5e5e5);
+        border-radius: 13px; background: var(--figma-color-bg, #fff); box-shadow: 0 14px 40px #00000024;
+      }
+      .export-symbol {
+        display: grid; place-items: center; width: 38px; height: 38px; margin-bottom: 13px;
+        border-radius: 11px; color: var(--figma-color-icon-brand, #0d99ff);
+        background: var(--figma-color-bg-selected-secondary, #edf7ff);
+      }
+      .spinner { width: 17px; height: 17px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .75s linear infinite; }
+      .success-mark, .error-mark { display: none; width: 20px; height: 20px; }
+      .export-overlay.complete .spinner, .export-overlay.failed .spinner { display: none; }
+      .export-overlay.complete .success-mark, .export-overlay.failed .error-mark { display: block; }
+      .export-overlay.complete .export-symbol { color: var(--figma-color-icon-success, #0b7a3e); background: var(--figma-color-bg-success-tertiary, #e8f5ec); }
+      .export-overlay.failed .export-symbol { color: var(--figma-color-icon-danger, #f24822); background: var(--figma-color-bg-danger-tertiary, #fff0ed); }
+      .export-dialog strong { display: block; font-size: 14px; line-height: 1.4; }
+      .track { height: 4px; margin-top: 15px; overflow: hidden; border-radius: 99px; background: var(--figma-color-bg-tertiary, #ebebeb); }
+      .bar { width: 0; height: 100%; border-radius: inherit; background: var(--figma-color-bg-brand, #0d99ff); transition: width .16s ease; }
+      .status { min-height: 17px; margin-top: 9px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 10.5px; line-height: 1.45; }
+      .error { color: var(--figma-color-text-danger, #f24822); }
+      .download-info { display: none; margin-top: 14px; padding: 10px 11px; border-radius: 8px; background: var(--figma-color-bg-secondary, #f7f7f7); }
+      .export-overlay.complete .download-info { display: block; }
+      .download-filename { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; font-weight: 600; }
+      .download-hint { display: block; margin-top: 5px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 9.5px; line-height: 1.45; }
+      .dialog-actions { display: none; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+      .export-overlay.complete .dialog-actions, .export-overlay.failed .dialog-actions { display: grid; }
+      .dialog-button { height: 34px; border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 6px; background: var(--figma-color-bg, #fff); color: var(--figma-color-text, #1e1e1e); font-size: 10.5px; font-weight: 600; cursor: pointer; }
+      .dialog-button.primary { border-color: transparent; background: var(--figma-color-bg-brand, #0d99ff); color: var(--figma-color-text-onbrand, #fff); }
+      .export-overlay.failed #download-again { display: none; }
+      .export-overlay.failed .dialog-actions { grid-template-columns: 1fr; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div id="app" class="app" aria-busy="true">
+    <div class="header">
+      <div>
+        <h1>FrameParcel</h1>
+        <div id="tagline" class="subtle">Pack design, assets, and implementation context into one inspectable handoff.</div>
+      </div>
+      <div class="header-actions">
+        <div class="locale-switch" role="group" aria-label="Language">
+          <button type="button" class="locale-button" data-locale="zh" aria-pressed="false">中</button>
+          <button type="button" class="locale-button" data-locale="en" aria-pressed="false">EN</button>
+        </div>
+        <span id="local-only" class="privacy">LOCAL ONLY</span>
+      </div>
+    </div>
+
+    <div id="scope-label" class="section-label" style="margin-top:14px">Export scope</div>
+    <div class="scope-switch">
+      <label class="scope-option">
+        <input type="radio" name="scope" value="selection" checked />
+        <span><span id="scope-selection-title" class="scope-title">Current selection</span><span id="scope-selection-copy" class="scope-copy">One node or multiple selected frames, sections, and components.</span></span>
+      </label>
+      <label class="scope-option">
+        <input type="radio" name="scope" value="page" />
+        <span><span id="scope-page-title" class="scope-title">Current Page</span><span id="scope-page-copy" class="scope-copy">Export visible top-level content without wrapping it in another frame.</span></span>
+      </label>
+    </div>
+
+    <div class="selection">
+      <div class="selection-row">
+        <div class="selection-mark" aria-hidden="true"></div>
+        <div style="min-width:0">
+          <strong id="selection-name">Reading selection…</strong>
+          <div id="selection-meta" class="subtle"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="purpose-label" class="section-label">What will this package be used for?</div>
+    <div class="presets">
+      <label class="preset">
+        <input type="radio" name="preset" value="developer" checked />
+        <span><span id="developer-title" class="preset-title">Development or AI</span><span id="developer-copy" class="preset-copy">Previews, geometry, original images, smart SVGs, and a browsable index.html.</span></span>
+        <span id="recommended" class="recommended">RECOMMENDED</span>
+      </label>
+      <label class="preset">
+        <input type="radio" name="preset" value="review" />
+        <span><span id="review-title" class="preset-title">Visual review</span><span id="review-copy" class="preset-copy">Page and component previews plus a local browser. The smallest package.</span></span>
+        <span></span>
+      </label>
+      <label class="preset">
+        <input type="radio" name="preset" value="archive" />
+        <span><span id="archive-title" class="preset-title">Complete archive</span><span id="archive-copy" class="preset-copy">Adds Figma REST V1 data for debugging and long-term preservation.</span></span>
+        <span></span>
+      </label>
+    </div>
+
+    <details>
+      <summary id="custom-summary">Customize contents</summary>
+      <div class="advanced">
+        <label><input id="node-index" type="checkbox" checked /><span id="node-index-label">Implementation node index<small>Relative and absolute geometry, type, colors, effects, components, and variables.</small></span></label>
+        <label><input id="screenshots" type="checkbox" checked /><span id="screenshots-label">Screen and component 2× PNGs<small>Full surfaces go to screens; small top-level fragments go to components.</small></span></label>
+        <label><input id="images" type="checkbox" checked /><span id="images-label">Original bitmap assets<small>Preserves image-fill bytes instead of recropping preview screenshots.</small></span></label>
+        <label><input id="svg" type="checkbox" checked /><span id="svg-label">Smart SVG assets<small>Exports visible icon compositions while skipping hidden layers and duplicates.</small></span></label>
+        <label><input id="viewer" type="checkbox" checked /><span id="viewer-label">Local browser and handoff guide<small>Review the package without special tools and explain it to developers and agents.</small></span></label>
+        <label><input id="rest-json" type="checkbox" /><span id="rest-label">Figma REST V1 structure<small>Complete but usually redundant. Recommended only for full archives.</small></span></label>
+      </div>
+    </details>
+
+    <div class="actions">
+      <button id="export" disabled>Export handoff package</button>
+    </div>
+    </div>
+    <div id="export-overlay" class="export-overlay" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title" aria-hidden="true">
+      <div class="export-dialog">
+        <div class="export-symbol" aria-hidden="true">
+          <div class="spinner"></div>
+          <svg class="success-mark" viewBox="0 0 20 20" fill="none"><path d="m4 10.5 3.5 3.5L16 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="error-mark" viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </div>
+        <strong id="export-dialog-title">Preparing export…</strong>
+        <div class="track"><div id="bar" class="bar"></div></div>
+        <div id="status" class="status" aria-live="polite"></div>
+        <div class="download-info">
+          <span id="download-filename" class="download-filename"></span>
+          <span id="download-hint" class="download-hint"></span>
+        </div>
+        <div class="dialog-actions">
+          <button id="download-again" type="button" class="dialog-button">Download again</button>
+          <button id="dialog-close" type="button" class="dialog-button primary">Done</button>
+        </div>
+      </div>
+    </div>
+    <script>"use strict";(()=>{var M=Uint8Array,P=Uint16Array,Ee=Int32Array,Te=new M([0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,0,0,0]),Me=new M([0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,0,0]),Be=new M([16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15]),Ne=function(e,t){for(var n=new P(31),r=0;r<31;++r)n[r]=t+=1<<e[r-1];for(var o=new Ee(n[30]),r=1;r<30;++r)for(var i=n[r];i<n[r+1];++i)o[i]=i-n[r]<<5|r;return{b:n,r:o}},Ze=Ne(Te,2),ct=Ze.b,we=Ze.r;ct[28]=258,we[258]=28;var Ve=Ne(Me,0),Dt=Ve.b,He=Ve.r,xe=new P(32768);for(v=0;v<32768;++v)G=(v&43690)>>1|(v&21845)<<1,G=(G&52428)>>2|(G&13107)<<2,G=(G&61680)>>4|(G&3855)<<4,xe[v]=((G&65280)>>8|(G&255)<<8)>>1;var G,v,oe=(function(e,t,n){for(var r=e.length,o=0,i=new P(t);o<r;++o)e[o]&&++i[e[o]-1];var s=new P(t);for(o=1;o<t;++o)s[o]=s[o-1]+i[o-1]<<1;var l;if(n){l=new P(1<<t);var h=15-t;for(o=0;o<r;++o)if(e[o])for(var u=o<<4|e[o],a=t-e[o],f=s[e[o]-1]++<<a,g=f|(1<<a)-1;f<=g;++f)l[xe[f]>>h]=u}else for(l=new P(r),o=0;o<r;++o)e[o]&&(l[o]=xe[s[e[o]-1]++]>>15-e[o]);return l}),V=new M(288);for(v=0;v<144;++v)V[v]=8;var v;for(v=144;v<256;++v)V[v]=9;var v;for(v=256;v<280;++v)V[v]=7;var v;for(v=280;v<288;++v)V[v]=8;var v,se=new M(32);for(v=0;v<32;++v)se[v]=5;var v,ht=oe(V,9,0);var vt=oe(se,5,0);var je=function(e){return(e+7)/8|0},Ye=function(e,t,n){return(t==null||t<0)&&(t=0),(n==null||n>e.length)&&(n=e.length),new M(e.subarray(t,n))};var pt=["unexpected EOF","invalid block type","invalid length/literal","invalid distance","stream finished","no stream handler",,"no callback","invalid UTF-8 data","extra field too long","date not in range 1980-2099","filename too long","stream finishing","invalid zip data"],ue=function(e,t,n){var r=new Error(t||pt[e]);if(r.code=e,Error.captureStackTrace&&Error.captureStackTrace(r,ue),!n)throw r;return r};var N=function(e,t,n){n<<=t&7;var r=t/8|0;e[r]|=n,e[r+1]|=n>>8},re=function(e,t,n){n<<=t&7;var r=t/8|0;e[r]|=n,e[r+1]|=n>>8,e[r+2]|=n>>16},de=function(e,t){for(var n=[],r=0;r<e.length;++r)e[r]&&n.push({s:r,f:e[r]});var o=n.length,i=n.slice();if(!o)return{t:We,l:0};if(o==1){var s=new M(n[0].s+1);return s[n[0].s]=1,{t:s,l:1}}n.sort(function(A,b){return A.f-b.f}),n.push({s:-1,f:25001});var l=n[0],h=n[1],u=0,a=1,f=2;for(n[0]={s:-1,f:l.f+h.f,l,r:h};a!=o-1;)l=n[n[u].f<n[f].f?u++:f++],h=n[u!=a&&n[u].f<n[f].f?u++:f++],n[a++]={s:-1,f:l.f+h.f,l,r:h};for(var g=i[0].s,r=1;r<o;++r)i[r].s>g&&(g=i[r].s);var m=new P(g+1),d=Se(n[a-1],m,0);if(d>t){var r=0,y=0,C=d-t,B=1<<C;for(i.sort(function(b,w){return m[w.s]-m[b.s]||b.f-w.f});r<o;++r){var F=i[r].s;if(m[F]>t)y+=B-(1<<d-m[F]),m[F]=t;else break}for(y>>=C;y>0;){var H=i[r].s;m[H]<t?y-=1<<t-m[H]++-1:++r}for(;r>=0&&y;--r){var x=i[r].s;m[x]==t&&(--m[x],++y)}d=t}return{t:new M(m),l:d}},Se=function(e,t,n){return e.s==-1?Math.max(Se(e.l,t,n+1),Se(e.r,t,n+1)):t[e.s]=n},qe=function(e){for(var t=e.length;t&&!e[--t];);for(var n=new P(++t),r=0,o=e[0],i=1,s=function(h){n[r++]=h},l=1;l<=t;++l)if(e[l]==o&&l!=t)++i;else{if(!o&&i>2){for(;i>138;i-=138)s(32754);i>2&&(s(i>10?i-11<<5|28690:i-3<<5|12305),i=0)}else if(i>3){for(s(o),--i;i>6;i-=6)s(8304);i>2&&(s(i-3<<5|8208),i=0)}for(;i--;)s(o);i=1,o=e[l]}return{c:n.subarray(0,r),n:t}},ie=function(e,t){for(var n=0,r=0;r<t.length;++r)n+=e[r]*t[r];return n},Ke=function(e,t,n){var r=n.length,o=je(t+2);e[o]=r&255,e[o+1]=r>>8,e[o+2]=e[o]^255,e[o+3]=e[o+1]^255;for(var i=0;i<r;++i)e[o+i+4]=n[i];return(o+4+r)*8},Oe=function(e,t,n,r,o,i,s,l,h,u,a){N(t,a++,n),++o[256];for(var f=de(o,15),g=f.t,m=f.l,d=de(i,15),y=d.t,C=d.l,B=qe(g),F=B.c,H=B.n,x=qe(y),A=x.c,b=x.n,w=new P(19),p=0;p<F.length;++p)++w[F[p]&31];for(var p=0;p<A.length;++p)++w[A[p]&31];for(var c=de(w,7),I=c.t,W=c.l,D=19;D>4&&!I[Be[D-1]];--D);var J=u+5<<3,U=ie(o,V)+ie(i,se)+s,$=ie(o,g)+ie(i,y)+s+14+3*D+ie(w,I)+2*w[16]+3*w[17]+7*w[18];if(h>=0&&J<=U&&J<=$)return Ke(t,a,e.subarray(h,h+u));var q,S,R,Z;if(N(t,a,1+($<U)),a+=2,$<U){q=oe(g,m,0),S=g,R=oe(y,C,0),Z=y;var pe=oe(I,W,0);N(t,a,H-257),N(t,a+5,b-1),N(t,a+10,D-4),a+=14;for(var p=0;p<D;++p)N(t,a+3*p,I[Be[p]]);a+=3*D;for(var O=[F,A],ne=0;ne<2;++ne)for(var X=O[ne],p=0;p<X.length;++p){var k=X[p]&31;N(t,a,pe[k]),a+=I[k],k>15&&(N(t,a,X[p]>>5&127),a+=X[p]>>12)}}else q=ht,S=V,R=vt,Z=se;for(var p=0;p<l;++p){var T=r[p];if(T>255){var k=T>>18&31;re(t,a,q[k+257]),a+=S[k+257],k>7&&(N(t,a,T>>23&31),a+=Te[k]);var Q=T&31;re(t,a,R[Q]),a+=Z[Q],Q>3&&(re(t,a,T>>5&8191),a+=Me[Q])}else re(t,a,q[T]),a+=S[T]}return re(t,a,q[256]),a+S[256]},gt=new Ee([65540,131080,131088,131104,262176,1048704,1048832,2114560,2117632]),We=new M(0),mt=function(e,t,n,r,o,i){var s=i.z||e.length,l=new M(r+s+5*(1+Math.ceil(s/7e3))+o),h=l.subarray(r,l.length-o),u=i.l,a=(i.r||0)&7;if(t){a&&(h[0]=i.r>>3);for(var f=gt[t-1],g=f>>13,m=f&8191,d=(1<<n)-1,y=i.p||new P(32768),C=i.h||new P(d+1),B=Math.ceil(n/3),F=2*B,H=function(ye){return(e[ye]^e[ye+1]<<B^e[ye+2]<<F)&d},x=new Ee(25e3),A=new P(288),b=new P(32),w=0,p=0,c=i.i||0,I=0,W=i.w||0,D=0;c+2<s;++c){var J=H(c),U=c&32767,$=C[J];if(y[U]=$,C[J]=U,W<=c){var q=s-c;if((w>7e3||I>24576)&&(q>423||!u)){a=Oe(e,h,0,x,A,b,p,I,D,c-D,a),I=w=p=0,D=c;for(var S=0;S<286;++S)A[S]=0;for(var S=0;S<30;++S)b[S]=0}var R=2,Z=0,pe=m,O=U-/*__BUNDLED_UI__*/32767;if(q>2&&J==H(c-O))for(var ne=Math.min(g,q)-1,X=Math.min(32767,c),k=Math.min(258,q);O<=X&&--pe&&U!=$;){if(e[c+R]==e[c+R-O]){for(var T=0;T<k&&e[c+T]==e[c+T-O];++T);if(T>R){if(R=T,Z=O,T>ne)break;for(var Q=Math.min(O,T-2),Fe=0,S=0;S<Q;++S){var ge=c-O+S&32767,ft=y[ge],Ue=ge-ft&32767;Ue>Fe&&(Fe=Ue,$=ge)}}}U=$,$=y[U],O+=U-/*__BUNDLED_UI__*/32767}if(Z){x[I++]=268435456|we[R]<<18|He[Z];var $e=we[R]&31,Re=He[Z]&31;p+=Te[$e]+Me[Re],++A[257+$e],++b[Re],W=c+R,++w}else x[I++]=e[c],++A[e[c]]}}for(c=Math.max(c,W);c<s;++c)x[I++]=e[c],++A[e[c]];a=Oe(e,h,u,x,A,b,p,I,D,c-D,a),u||(i.r=a&7|h[a/8|0]<<3,a-=7,i.h=C,i.p=y,i.i=c,i.w=W)}else{for(var c=i.w||0;c<s+u;c+=65535){var me=c+65535;me>=s&&(h[a/8|0]=u,me=s),a=Ke(h,a+1,e.subarray(c,me))}i.i=s}return Ye(l,0,r+je(a)+o)},yt=(function(){for(var e=new Int32Array(256),t=0;t<256;++t){for(var n=t,r=9;--r;)n=(n&1&&-306674912)^n>>>1;e[t]=n}return e})(),dt=function(){var e=-1;return{p:function(t){for(var n=e,r=0;r<t.length;++r)n=yt[n&255^t[r]]^n>>>8;e=n},d:function(){return~e}}};var wt=function(e,t,n,r,o){if(!o&&(o={l:1},t.dictionary)){var i=t.dictionary.subarray(-32768),s=new M(i.length+e.length);s.set(i),s.set(e,i.length),e=s,o.w=i.length}return mt(e,t.level==null?6:t.level,t.mem==null?o.l?Math.ceil(Math.max(8,Math.min(13,Math.log(e.length)))*1.5):20:12+t.mem,n,r,o)},Je=function(e,t){var n={};for(var r in e)n[r]=e[r];for(var r in t)n[r]=t[r];return n};var z=function(e,t,n){for(;n;++t)e[t]=n,n>>>=8};function xt(e,t){return wt(e,t||{},0,0)}var Xe=function(e,t,n,r){for(var o in e){var i=e[o],s=t+o,l=r;Array.isArray(i)&&(l=Je(r,i[1]),i=i[0]),ArrayBuffer.isView(i)?n[s]=[i,l]:(n[s+="/"]=[new M(0),l],Xe(i,s,n,r))}},ke=typeof TextEncoder<"u"&&new TextEncoder,St=typeof TextDecoder<"u"&&new TextDecoder,zt=0;try{St.decode(We,{stream:!0}),zt=1}catch{}function le(e,t){if(t){for(var n=new M(e.length),r=0;r<e.length;++r)n[r]=e.charCodeAt(r);return n}if(ke)return ke.encode(e);for(var o=e.length,i=new M(e.length+(e.length>>1)),s=0,l=function(a){i[s++]=a},r=0;r<o;++r){if(s+5>i.length){var h=new M(s+8+(o-r<<1));h.set(i),i=h}var u=e.charCodeAt(r);u<128||t?l(u):u<2048?(l(192|u>>6),l(128|u&63)):u>55295&&u<57344?(u=65536+(u&1047552)|e.charCodeAt(++r)&1023,l(240|u>>18),l(128|u>>12&63),l(128|u>>6&63),l(128|u&63)):(l(224|u>>12),l(128|u>>6&63),l(128|u&63))}return Ye(i,0,s)}var ze=function(e){var t=0;if(e)for(var n in e){var r=e[n].length;r>65535&&ue(9),t+=r+4}return t},Ge=function(e,t,n,r,o,i,s,l){var h=r.length,u=n.extra,a=l&&l.length,f=ze(u);z(e,t,s!=null?33639248:67324752),t+=4,s!=null&&(e[t++]=20,e[t++]=n.os),e[t]=20,t+=2,e[t++]=n.flag<<1|(i<0&&8),e[t++]=o&&8,e[t++]=n.compression&255,e[t++]=n.compression>>8;var g=new Date(n.mtime==null?Date.now():n.mtime),m=g.getFullYear()-1980;if((m<0||m>119)&&ue(10),z(e,t,m<<25|g.getMonth()+1<<21|g.getDate()<<16|g.getHours()<<11|g.getMinutes()<<5|g.getSeconds()>>1),t+=4,i!=-1&&(z(e,t,n.crc),z(e,t+4,i<0?-i-2:i),z(e,t+8,n.size)),z(e,t+12,h),z(e,t+14,f),t+=16,s!=null&&(z(e,t,a),z(e,t+6,n.attrs),z(e,t+10,s),t+=14),e.set(r,t),t+=h,f)for(var d in u){var y=u[d],C=y.length;z(e,t,+d),z(e,t+2,C),e.set(y,t+4),t+=4+C}return a&&(e.set(l,t),t+=a),t},Et=function(e,t,n,r,o){z(e,t,101010256),z(e,t+8,n),z(e,t+10,n),z(e,t+12,r),z(e,t+16,o)};function Qe(e,t){t||(t={});var n={},r=[];Xe(e,"",n,t);var o=0,i=0;for(var s in n){var l=n[s],h=l[0],u=l[1],a=u.level==0?0:8,f=le(s),g=f.length,m=u.comment,d=m&&le(m),y=d&&d.length,C=ze(u.extra);g>65535&&ue(11);var B=a?xt(h,u):h,F=B.length,H=dt();H.p(h),r.push(Je(u,{size:h.length,crc:H.d(),c:B,f,m:d,u:g!=s.length||d&&m.length!=y,o,compression:a})),o+=30+g+C+F,i+=76+2*(g+C)+(y||0)+F}for(var x=new M(i+22),A=o,b=i-o,w=0;w<r.length;++w){var f=r[w];Ge(x,f.o,f,f.f,f.u,f.c.length);var p=30+f.f.length+ze(f.extra);x.set(f.c,f.o+p),Ge(x,o,f,f.f,f.u,f.c.length,f.o,f.m),o+=16+p+(f.m?f.m.length:0)}return Et(x,o,r.length,b,A),x}var rt={en:{tagline:"Pack design, assets, and implementation context into one inspectable handoff.","local-only":"LOCAL ONLY","purpose-label":"What will this package be used for?","scope-label":"Export scope","scope-selection-title":"Current selection","scope-selection-copy":"One node or multiple selected frames, sections, and components.","scope-page-title":"Current Page","scope-page-copy":"Export visible top-level content without wrapping it in another frame.","developer-title":"Development or AI","developer-copy":"Previews, geometry, original images, smart SVGs, and a browsable index.html.",recommended:"RECOMMENDED","review-title":"Visual review","review-copy":"Page and component previews plus a local browser. The smallest package.","archive-title":"Complete archive","archive-copy":"Adds Figma REST V1 data for debugging and long-term preservation.","custom-summary":"Customize contents","node-index-label":"Implementation node index<small>Relative and absolute geometry, type, colors, effects, components, and variables.</small>","screenshots-label":"Screen and component 2\xD7 PNGs<small>Full surfaces go to screens; small top-level fragments go to components.</small>","images-label":"Original bitmap assets<small>Preserves image-fill bytes instead of recropping preview screenshots.</small>","svg-label":"Smart SVG assets<small>Exports visible icon compositions while skipping hidden layers and duplicates.</small>","viewer-label":"Local browser and handoff guide<small>Review the package without special tools and explain it to developers and agents.</small>","rest-label":"Figma REST V1 structure<small>Complete but usually redundant. Recommended only for full archives.</small>",export:"Export handoff package",loading:"Reading selection\u2026",emptySelectionTitle:"Select one or more design nodes",emptyPageTitle:"Nothing exportable on this Page",emptySelectionReason:"Select a frame, section, component, or other exportable design node.",invalidSelectionReason:"The selection contains a node that Figma cannot export.",emptyPageReason:"This Page has no visible top-level design content.",preparing:"Preparing export\u2026",exportingTitle:"Building your handoff package",completeTitle:"Handoff package download started",errorTitle:"Export did not finish",compressing:"Compressing handoff package\u2026",downloadStarted:"Download started",downloadHint:"Find it in Downloads or your browser's chosen download location. If a save dialog appeared, use the folder you selected.",downloadAgain:"Download again",done:"Done",zipFailed:"ZIP creation failed"},zh:{tagline:"\u628A\u8BBE\u8BA1\u3001\u7D20\u6750\u548C\u5B9E\u73B0\u4E0A\u4E0B\u6587\u88C5\u8FDB\u4E00\u4E2A\u53EF\u68C0\u67E5\u7684\u672C\u5730\u4EA4\u4ED8\u5305\u3002","local-only":"\u4EC5\u672C\u673A","purpose-label":"\u8FD9\u4EFD\u5305\u5C06\u7528\u6765\u505A\u4EC0\u4E48\uFF1F","scope-label":"\u5BFC\u51FA\u8303\u56F4","scope-selection-title":"\u5F53\u524D\u9009\u62E9","scope-selection-copy":"\u652F\u6301\u5355\u4E2A\u8282\u70B9\uFF0C\u4E5F\u652F\u6301\u591A\u9009\u591A\u4E2A Frame\u3001Section \u6216\u7EC4\u4EF6\u3002","scope-page-title":"\u5F53\u524D Page","scope-page-copy":"\u65E0\u9700\u624B\u5DE5\u5957\u5916\u5C42 Frame\uFF0C\u5BFC\u51FA\u5F53\u524D Page \u5185\u6240\u6709\u53EF\u89C1\u9876\u5C42\u5185\u5BB9\u3002","developer-title":"\u4EA4\u7ED9\u5F00\u53D1\u6216 AI","developer-copy":"\u9875\u9762\u9884\u89C8\u3001\u5750\u6807\u6837\u5F0F\u3001\u539F\u59CB\u56FE\u7247\u3001\u7CBE\u7B80 SVG\uFF0C\u4EE5\u53CA\u53EF\u76F4\u63A5\u6D4F\u89C8\u7684 index.html\u3002",recommended:"\u63A8\u8350","review-title":"\u53EA\u505A\u89C6\u89C9\u8BC4\u5BA1","review-copy":"\u4EC5\u5BFC\u51FA\u9875\u9762\u4E0E\u7EC4\u4EF6\u9884\u89C8\uFF0C\u52A0\u4E00\u4EFD\u672C\u5730\u6D4F\u89C8\u9875\uFF1B\u4F53\u79EF\u6700\u5C0F\u3002","archive-title":"\u5B8C\u6574\u5F52\u6863","archive-copy":"\u5728\u5F00\u53D1\u5305\u57FA\u7840\u4E0A\u52A0\u5165 Figma REST V1 \u539F\u59CB\u7ED3\u6784\uFF0C\u9002\u5408\u6392\u67E5\u4E0E\u957F\u671F\u7559\u5B58\u3002","custom-summary":"\u81EA\u5B9A\u4E49\u5185\u5BB9","node-index-label":"\u5F00\u53D1\u5750\u6807\u7D22\u5F15<small>\u76F8\u5BF9/\u7EDD\u5BF9\u5750\u6807\u3001\u5B57\u4F53\u3001\u989C\u8272\u3001\u6548\u679C\u3001\u7EC4\u4EF6\u548C\u53D8\u91CF\u5F15\u7528\u3002</small>","screenshots-label":"\u9875\u9762\u4E0E\u7EC4\u4EF6 2\xD7 PNG<small>\u81EA\u52A8\u628A\u5B8C\u6574\u9875\u9762\u653E\u5165 screens\uFF0C\u5C0F\u578B\u9876\u5C42\u7D20\u6750\u653E\u5165 components\u3002</small>","images-label":"\u539F\u59CB\u4F4D\u56FE<small>\u4FDD\u7559\u56FE\u7247\u586B\u5145\u7684\u539F\u59CB\u5B57\u8282\uFF0C\u4E0D\u4ECE\u9884\u89C8\u622A\u56FE\u4E8C\u6B21\u88C1\u5207\u3002</small>","svg-label":"\u7CBE\u7B80 SVG<small>\u5BFC\u51FA\u53EF\u89C1\u7684\u5B8C\u6574\u56FE\u6807\u7EC4\u5408\uFF0C\u8DF3\u8FC7\u9690\u85CF\u5C42\u3001\u5185\u90E8\u8DEF\u5F84\u548C\u91CD\u590D\u6587\u4EF6\u3002</small>","viewer-label":"\u672C\u5730\u6D4F\u89C8\u9875\u4E0E\u4EA4\u4ED8\u8BF4\u660E<small>\u65E0\u9700\u5B89\u88C5\u5DE5\u5177\u5373\u53EF\u67E5\u770B\u9875\u9762\u6E05\u5355\uFF0C\u5E76\u544A\u8BC9\u5F00\u53D1\u8005\u6216 AI \u5982\u4F55\u4F7F\u7528\u5305\u5185\u6587\u4EF6\u3002</small>","rest-label":"Figma REST V1 \u539F\u59CB\u7ED3\u6784<small>\u4FE1\u606F\u5B8C\u6574\u4F46\u901A\u5E38\u4E0E\u5750\u6807\u7D22\u5F15\u91CD\u590D\uFF0C\u9ED8\u8BA4\u4EC5\u7528\u4E8E\u5B8C\u6574\u5F52\u6863\u3002</small>",export:"\u5BFC\u51FA\u4EA4\u4ED8\u5305",loading:"\u6B63\u5728\u8BFB\u53D6\u9009\u62E9\u2026",emptySelectionTitle:"\u8BF7\u9009\u62E9\u4E00\u4E2A\u6216\u591A\u4E2A\u8BBE\u8BA1\u8282\u70B9",emptyPageTitle:"\u5F53\u524D Page \u65E0\u53EF\u5BFC\u51FA\u5185\u5BB9",emptySelectionReason:"\u8BF7\u9009\u62E9 Frame\u3001Section\u3001\u7EC4\u4EF6\u6216\u5176\u4ED6\u53EF\u5BFC\u51FA\u7684\u8BBE\u8BA1\u8282\u70B9\u3002",invalidSelectionReason:"\u5F53\u524D\u9009\u62E9\u4E2D\u5305\u542B Figma \u65E0\u6CD5\u5BFC\u51FA\u7684\u8282\u70B9\u3002",emptyPageReason:"\u5F53\u524D Page \u6CA1\u6709\u53EF\u89C1\u7684\u9876\u5C42\u8BBE\u8BA1\u5185\u5BB9\u3002",preparing:"\u51C6\u5907\u5BFC\u51FA\u2026",exportingTitle:"\u6B63\u5728\u751F\u6210\u4EA4\u4ED8\u5305",completeTitle:"\u4EA4\u4ED8\u5305\u5DF2\u5F00\u59CB\u4E0B\u8F7D",errorTitle:"\u5BFC\u51FA\u672A\u5B8C\u6210",compressing:"\u6B63\u5728\u538B\u7F29\u4EA4\u4ED8\u5305\u2026",downloadStarted:"\u4E0B\u8F7D\u5DF2\u5F00\u59CB",downloadHint:"\u8BF7\u5230\u7CFB\u7EDF\u201C\u4E0B\u8F7D\u201D\u6587\u4EF6\u5939\u6216\u6D4F\u89C8\u5668\u8BBE\u7F6E\u7684\u4E0B\u8F7D\u4F4D\u7F6E\u67E5\u627E\uFF1B\u5982\u679C\u521A\u624D\u51FA\u73B0\u4FDD\u5B58\u7A97\u53E3\uFF0C\u5219\u4EE5\u4F60\u9009\u62E9\u7684\u4F4D\u7F6E\u4E3A\u51C6\u3002",downloadAgain:"\u518D\u6B21\u4E0B\u8F7D",done:"\u5B8C\u6210",zipFailed:"ZIP \u751F\u6210\u5931\u8D25"}},fe=document.querySelector("#app"),Ae=document.querySelector("#selection-name"),Le=document.querySelector("#selection-meta"),K=document.querySelector("#export"),ae=document.querySelector("#export-overlay"),it=document.querySelector("#export-dialog-title"),be=document.querySelector("#bar"),_e=document.querySelector("#status"),Tt=document.querySelector("#download-filename"),ot=document.querySelector("#download-hint"),at=document.querySelector("#download-again"),he=document.querySelector("#dialog-close"),Y={},ee=null,L=navigator.language.toLowerCase().startsWith("zh")?"zh":"en",De=!1,Pe="developer",te="selection",st={selection:{valid:!1,reasonCode:"EMPTY_SELECTION"},page:{valid:!1,reasonCode:"EMPTY_PAGE"}},lt=["node-index","rest-json","screenshots","images","svg","viewer"];function E(e){return rt[L][e]}function Ie(){De=!0,fe.classList.add("ready"),fe.setAttribute("aria-busy","false")}function _(e){return document.querySelector(`#${e}`).checked}function Mt(e,t){document.querySelector(`#${e}`).checked=t}function Ct(e){switch(e.reasonCode){case"INVALID_SELECTION":return E("invalidSelectionReason");case"EMPTY_PAGE":return E("emptyPageReason");default:return E("emptySelectionReason")}}function ve(){let e=st[te];e.valid?(Ae.textContent=e.nodeType==="SELECTION"?L==="zh"?`\u5DF2\u9009\u62E9 ${e.rootCount??0} \u4E2A\u8282\u70B9`:`${e.rootCount??0} selected nodes`:e.name??(te==="page"?"Current Page":"Selection"),Le.textContent=L==="zh"?`${e.nodeType} \xB7 ${e.rootCount??0} \u4E2A\u9876\u5C42\u8282\u70B9 \xB7 \u8BC6\u522B ${e.screenCount??0} \u4E2A\u9875\u9762 / ${e.componentCount??0} \u4E2A\u7EC4\u4EF6`:`${e.nodeType} \xB7 ${e.rootCount??0} top-level nodes \xB7 ${e.screenCount??0} screens / ${e.componentCount??0} components`,K.disabled=!1):(Ae.textContent=E(te==="page"?"emptyPageTitle":"emptySelectionTitle"),Le.textContent=Ct(e),K.disabled=!0)}function ce(e,t=!1){L=e,document.documentElement.lang=L==="zh"?"zh-CN":"en";for(let[n,r]of Object.entries(rt[L])){let o=document.getElementById(n);o&&(o.innerHTML=r)}document.querySelectorAll("[data-locale]").forEach(n=>{let r=n.dataset.locale===L;n.classList.toggle("active",r),n.setAttribute("aria-pressed",String(r))}),ot.textContent=E("downloadHint"),at.textContent=E("downloadAgain"),he.textContent=E("done"),ve(),t&&parent.postMessage({pluginMessage:{type:"set-locale",locale:L}},"*")}function At(e){let t=e==="review"?{"node-index":!1,"rest-json":!1,screenshots:!0,images:!1,svg:!1,viewer:!0}:{"node-index":!0,"rest-json":e==="archive",screenshots:!0,images:!0,svg:!0,viewer:!0};lt.forEach(n=>Mt(n,t[n])),Pe=e}function Lt(){Pe="custom",document.querySelectorAll('input[name="preset"]').forEach(e=>{e.checked=!1})}document.querySelectorAll("[data-locale]").forEach(e=>{e.addEventListener("click",()=>{let t=e.dataset.locale;(t==="zh"||t==="en")&&ce(t,!0)})});document.querySelectorAll('input[name="preset"]').forEach(e=>{e.addEventListener("change",()=>{e.checked&&At(e.value)})});lt.forEach(e=>document.querySelector(`#${e}`).addEventListener("change",Lt));document.querySelectorAll('input[name="scope"]').forEach(e=>{e.addEventListener("change",()=>{e.checked&&(te=e.value,ve())})});function et(e,t){st={selection:e,page:t},ve()}function tt(e){te=e;let t=document.querySelector(`input[name="scope"][value="${e}"]`);t&&(t.checked=!0),ve()}function bt(){ae.className="export-overlay visible",ae.setAttribute("aria-hidden","false"),it.textContent=E("exportingTitle"),fe.inert=!0}function Ce(e,t){ae.classList.add(e),it.textContent=t,he.focus()}function It(){he.blur(),ae.className="export-overlay",ae.setAttribute("aria-hidden","true"),fe.inert=!1,K.focus()}function ut(e){let t=document.createElement("a");t.href=e.url,t.download=e.filename,t.click()}function j(e,t=!1){_e.textContent=e,_e.classList.toggle("error",t)}function nt(e){return e<1024?`${e} B`:e<1024*1024?`${(e/1024).toFixed(1)} KB`:`${(e/1024/1024).toFixed(1)} MB`}K.addEventListener("click",()=>{K.disabled=!0,bt(),be.style.width="0%",j(E("preparing"));for(let e of Object.keys(Y))delete Y[e];parent.postMessage({pluginMessage:{type:"export",options:{preset:Pe,locale:L,scope:te,includeNodeIndex:_("node-index"),includeRestJson:_("rest-json"),includeScreenshots:_("screenshots"),includeImages:_("images"),includeSvg:_("svg"),includeViewer:_("viewer"),screenshotScale:2}}},"*")});window.onmessage=e=>{let t=e.data.pluginMessage;if(t){if(t.type==="initialize"){et(t.selection,t.page),tt(t.selection.valid?"selection":"page"),ce(t.locale??L),Ie();return}if(t.type==="selection"){et(t.selection,t.page),tt(t.selection.valid?"selection":"page"),De||(ce(L),Ie());return}if(t.type==="export-start"){j(L==="zh"?`\u5F00\u59CB\u5904\u7406\uFF0C\u9884\u8BA1 ${t.total} \u4E2A\u6B65\u9AA4\u2026`:`Starting ${t.total} export steps\u2026`);return}if(t.type==="export-file"){Y[t.path]=t.bytes instanceof Uint8Array?t.bytes:new Uint8Array(t.bytes);return}if(t.type==="export-progress"){let n=t.total>0?t.completed/t.total:0;be.style.width=`${Math.max(0,Math.min(100,n*100))}%`,j(t.label);return}if(t.type==="export-complete"){j(E("compressing"));try{Y["EXPORT_SUMMARY.txt"]=le(t.summary);let n=Qe(Y,{level:0}),r=new Blob([n],{type:"application/zip"}),o=URL.createObjectURL(r);ee&&URL.revokeObjectURL(ee.url),ee={url:o,filename:t.filename},ut(ee),be.style.width="100%",j(L==="zh"?`${t.receipt.screens} \u4E2A\u9875\u9762\u3001${t.receipt.components} \u4E2A\u7EC4\u4EF6\u3001${t.receipt.images} \u5F20\u539F\u56FE \xB7 ${Object.keys(Y).length} \u4E2A\u6587\u4EF6 \xB7 ${nt(n.byteLength)}`:`${t.receipt.screens} screens, ${t.receipt.components} components, ${t.receipt.images} original images \xB7 ${Object.keys(Y).length} files \xB7 ${nt(n.byteLength)}`),Tt.textContent=t.filename,ot.textContent=E("downloadHint"),Ce("complete",E("completeTitle"))}catch(n){j(`${E("zipFailed")}: ${n instanceof Error?n.message:String(n)}`,!0),Ce("failed",E("errorTitle"))}finally{K.disabled=!1}return}t.type==="export-error"&&(j(t.message,!0),K.disabled=!1,Ce("failed",E("errorTitle")))}};at.addEventListener("click",()=>{ee&&ut(ee)});he.addEventListener("click",It);setTimeout(()=>{De||(ce(L),Ae.textContent=E("loading"),Le.textContent="",Ie())},250);})();
+</script>
+  </body>
+</html>

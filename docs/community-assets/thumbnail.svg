@@ -1,0 +1,69 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1920" height="1080" fill="#F5F5F2"/>
+  <rect x="112" y="88" width="64" height="64" rx="14" fill="#F7F7F5"/>
+  <rect x="124" y="100" width="18" height="18" rx="5" fill="#F24E1E"/>
+  <rect x="124" y="122" width="18" height="18" rx="5" fill="#0ACF83"/>
+  <rect x="145" y="100" width="19" height="40" rx="6" fill="#171717"/>
+  <circle cx="154.5" cy="111" r="4" fill="#A259FF"/>
+  <path d="M154.5 120V132" stroke="white" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 5"/>
+  <path d="M151 134L154.5 137L158 134" stroke="#1ABCFE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="196" y="134" fill="#171717" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="750">FrameParcel</text>
+
+  <text x="112" y="330" fill="#171717" font-family="Inter, Arial, sans-serif" font-size="82" font-weight="750" letter-spacing="-3">Export once.</text>
+  <text x="112" y="424" fill="#171717" font-family="Inter, Arial, sans-serif" font-size="82" font-weight="750" letter-spacing="-3">Hand off anywhere.</text>
+  <text x="116" y="490" fill="#666660" font-family="Inter, Arial, sans-serif" font-size="29">Figma context your coding agent can actually inspect.</text>
+
+  <g transform="translate(112 626)">
+    <rect width="390" height="278" rx="26" fill="white" stroke="#DEDED8" stroke-width="2"/>
+    <g transform="translate(44 42)">
+      <path d="M0 22C0 9.85 9.85 0 22 0H56V44H0V22Z" fill="#F24E1E"/>
+      <path d="M56 0H78C90.15 0 100 9.85 100 22C100 34.15 90.15 44 78 44H56V0Z" fill="#FF7262"/>
+      <path d="M0 44H56V88H22C9.85 88 0 78.15 0 66V44Z" fill="#A259FF"/>
+      <path d="M56 44H78C90.15 44 100 53.85 100 66C100 78.15 90.15 88 78 88H56V44Z" fill="#1ABCFE"/>
+      <path d="M0 88H56V110C56 122.15 46.15 132 34 132H22C9.85 132 0 122.15 0 110V88Z" fill="#0ACF83"/>
+    </g>
+    <rect x="178" y="42" width="154" height="94" rx="14" fill="#171717"/>
+    <rect x="195" y="57" width="120" height="11" rx="5.5" fill="#F24E1E"/>
+    <rect x="195" y="77" width="88" height="9" rx="4.5" fill="#A259FF"/>
+    <rect x="195" y="96" width="104" height="9" rx="4.5" fill="#1ABCFE"/>
+    <text x="44" y="210" fill="#171717" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Figma selection</text>
+    <text x="44" y="243" fill="#70706A" font-family="Inter, Arial, sans-serif" font-size="19">Frames, assets, styles, geometry</text>
+  </g>
+
+  <path d="M540 765H646" stroke="#999993" stroke-width="4" stroke-linecap="round"/>
+  <path d="M632 751L647 765L632 779" stroke="#999993" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g transform="translate(688 656)">
+    <rect width="218" height="218" rx="48" fill="#F7F7F5" stroke="#DEDED8" stroke-width="2"/>
+    <rect x="41" y="41" width="63" height="63" rx="17" fill="#F24E1E"/>
+    <rect x="41" y="114" width="63" height="63" rx="17" fill="#0ACF83"/>
+    <rect x="114" y="41" width="63" height="136" rx="20" fill="#171717"/>
+    <circle cx="145.5" cy="78" r="14" fill="#A259FF"/>
+    <path d="M145.5 107V145" stroke="white" stroke-width="9" stroke-linecap="round" stroke-dasharray="3 14"/>
+    <path d="M134 153L145.5 164L157 153" stroke="#1ABCFE" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="109" y="254" fill="#171717" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">Local ZIP</text>
+  </g>
+
+  <path d="M948 765H1054" stroke="#999993" stroke-width="4" stroke-linecap="round"/>
+  <path d="M1040 751L1055 765L1040 779" stroke="#999993" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g transform="translate(1132 614)">
+    <g>
+      <image href="vendor-marks/codex.png" width="76" height="76" preserveAspectRatio="xMidYMid meet"/>
+      <text x="104" y="50" fill="#171717" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700">Codex</text>
+    </g>
+    <g transform="translate(0 112)">
+      <image href="vendor-marks/claude-code.png" width="76" height="76" preserveAspectRatio="xMidYMid meet"/>
+      <text x="104" y="50" fill="#171717" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700">Claude Code</text>
+    </g>
+    <g transform="translate(0 224)">
+      <image href="vendor-marks/cursor.png" width="76" height="76" preserveAspectRatio="xMidYMid meet"/>
+      <text x="104" y="50" fill="#171717" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700">Cursor</text>
+    </g>
+  </g>
+
+  <g transform="translate(112 974)">
+    <circle cx="10" cy="10" r="10" fill="#0ACF83"/>
+    <text x="34" y="18" fill="#555550" font-family="Inter, Arial, sans-serif" font-size="23" font-weight="600">No token · No network access · Open source</text>
+  </g>
+</svg>

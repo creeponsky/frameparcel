@@ -1,0 +1,52 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1920" height="1080" fill="#111317"/>
+  <text x="92" y="132" fill="#0D99FF" font-family="SFMono-Regular, Menlo, monospace" font-size="24" font-weight="700">HANDOFF 清单 / 01</text>
+  <text x="92" y="254" fill="white" font-family="PingFang SC, Inter, Arial, sans-serif" font-size="70" font-weight="760" letter-spacing="-3">实现真正需要的，都在这里。</text>
+  <text x="95" y="320" fill="#929BA6" font-family="PingFang SC, Inter, Arial, sans-serif" font-size="29">视觉参考、实现结构和可复用素材，放进一个可以直接检查的 ZIP。</text>
+  <g transform="translate(92 414)">
+    <rect width="664" height="540" rx="26" fill="#1D2025" stroke="#343941" stroke-width="2"/>
+    <rect x="28" y="26" width="608" height="58" rx="13" fill="#292D33"/>
+    <circle cx="58" cy="55" r="9" fill="#0D99FF"/>
+    <text x="82" y="63" fill="#F1F4F7" font-family="SFMono-Regular, Menlo, monospace" font-size="21">product-flow-handoff.zip</text>
+    <g font-family="SFMono-Regular, Menlo, monospace" font-size="21">
+      <text x="42" y="132" fill="#DDE3E9">├── index.html</text>
+      <text x="42" y="174" fill="#DDE3E9">├── HANDOFF.md</text>
+      <text x="42" y="216" fill="#DDE3E9">├── design/</text>
+      <text x="78" y="258" fill="#8FA0AF">│   ├── node-index.json</text>
+      <text x="78" y="300" fill="#8FA0AF">│   └── rest-v1.json</text>
+      <text x="42" y="342" fill="#DDE3E9">├── screens/</text>
+      <text x="78" y="384" fill="#8FA0AF">│   ├── 01-onboarding.png</text>
+      <text x="78" y="426" fill="#8FA0AF">│   └── 02-home.png</text>
+      <text x="42" y="468" fill="#DDE3E9">└── assets/</text>
+      <text x="78" y="510" fill="#8FA0AF">    ├── images/</text>
+      <text x="78" y="552" fill="#8FA0AF">    └── svg/</text>
+    </g>
+  </g>
+  <g transform="translate(820 414)">
+    <rect width="1008" height="540" rx="26" fill="#F5F7FA"/>
+    <text x="38" y="58" fill="#111317" font-family="PingFang SC, Inter, Arial, sans-serif" font-size="25" font-weight="720">本地浏览页</text>
+    <text x="38" y="90" fill="#6E7884" font-family="PingFang SC, Inter, Arial, sans-serif" font-size="17">打开 index.html，无需安装额外工具。</text>
+    <g transform="translate(38 126)">
+      <rect width="272" height="366" rx="18" fill="white" stroke="#DDE2E7" stroke-width="2"/>
+      <rect x="22" y="22" width="228" height="272" rx="13" fill="#15171A"/>
+      <circle cx="136" cy="158" r="48" fill="#FFCD2E"/>
+      <rect x="22" y="316" width="146" height="10" rx="5" fill="#272C32"/>
+      <rect x="22" y="338" width="92" height="7" rx="3.5" fill="#A0A8B1"/>
+    </g>
+    <g transform="translate(330 126)">
+      <rect width="272" height="366" rx="18" fill="white" stroke="#DDE2E7" stroke-width="2"/>
+      <rect x="22" y="22" width="228" height="272" rx="13" fill="#15171A"/>
+      <rect x="48" y="72" width="176" height="20" rx="10" fill="#F0F3F6"/>
+      <rect x="48" y="110" width="120" height="12" rx="6" fill="#747E89"/>
+      <rect x="48" y="230" width="176" height="32" rx="16" fill="#0D99FF"/>
+      <rect x="22" y="316" width="122" height="10" rx="5" fill="#272C32"/>
+      <rect x="22" y="338" width="102" height="7" rx="3.5" fill="#A0A8B1"/>
+    </g>
+    <g transform="translate(622 126)">
+      <rect width="348" height="366" rx="18" fill="#0D99FF"/>
+      <path d="M92 128L174 84L256 128V220L174 266L92 220V128Z" fill="white"/>
+      <path d="M92 128L174 174L256 128M174 174V266" stroke="#0D99FF" stroke-width="7" stroke-linejoin="round"/>
+      <text x="74" y="326" fill="white" font-family="PingFang SC, Inter, Arial, sans-serif" font-size="22" font-weight="700">原始素材</text>
+    </g>
+  </g>
+</svg>

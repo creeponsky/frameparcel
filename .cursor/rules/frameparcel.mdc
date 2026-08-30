@@ -1,0 +1,6 @@
+---
+description: Canonical FrameParcel repository instructions
+alwaysApply: true
+---
+
+Read and follow `AGENTS.md` before changing this repository. Treat it as the canonical source for architecture, invariants, validation, and release boundaries.

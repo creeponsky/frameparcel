@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        font-family: Inter, "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--figma-color-text, #1e1e1e);
+        background: var(--figma-color-bg, #fff);
+        color-scheme: light dark;
+      }
+      .figma-light { color-scheme: light; }
+      .figma-dark { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 16px; overflow-x: hidden; background: var(--figma-color-bg, #fff); }
+      .app { opacity: 0; transition: opacity .08s ease; }
+      .app.ready { opacity: 1; }
+      button, input { font: inherit; }
+      .header { position: relative; min-height: 62px; padding-right: 80px; }
+      .header > div:first-child { min-width: 0; }
+      .header-actions { position: absolute; top: 0; right: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+      h1 { margin: 0 0 4px; font-size: 17px; line-height: 1.35; letter-spacing: -.01em; }
+      .privacy {
+        flex: none; margin-top: 1px; padding: 4px 7px; border-radius: 5px;
+        color: var(--figma-color-text-success, #0b7a3e);
+        background: var(--figma-color-bg-success-tertiary, #e8f5ec);
+        font-size: 10px; font-weight: 600;
+      }
+      .locale-switch {
+        display: flex; padding: 2px; border: 1px solid var(--figma-color-border, #e5e5e5);
+        border-radius: 6px; background: var(--figma-color-bg-secondary, #f7f7f7);
+      }
+      .locale-button {
+        width: auto; height: 22px; min-width: 26px; padding: 0 6px; border: 0; border-radius: 4px;
+        color: var(--figma-color-text-secondary, #6b6b6b); background: transparent;
+        font-size: 9.5px; font-weight: 600; cursor: pointer;
+      }
+      .locale-button:hover { color: var(--figma-color-text, #1e1e1e); background: var(--figma-color-bg-hover, #efefef); }
+      .locale-button.active { color: var(--figma-color-text, #1e1e1e); background: var(--figma-color-bg, #fff); box-shadow: 0 1px 2px #00000014; }
+      .subtle { color: var(--figma-color-text-secondary, #6b6b6b); font-size: 11px; line-height: 1.45; }
+      .scope-switch { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px; margin: 14px 0 8px; }
+      .scope-option {
+        display: grid; grid-template-columns: 15px 1fr; gap: 7px; align-items: start;
+        min-width: 0;
+        padding: 9px; border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 8px;
+        background: var(--figma-color-bg, #fff); cursor: pointer;
+      }
+      .scope-option > span { min-width: 0; }
+      .scope-option:has(input:checked) {
+        border-color: var(--figma-color-border-selected, #0d99ff);
+        background: var(--figma-color-bg-selected-secondary, #edf7ff);
+      }
+      .scope-option input { width: 13px; height: 13px; margin: 2px 0 0; accent-color: var(--figma-color-bg-brand, #0d99ff); }
+      .scope-title { display: block; font-size: 11px; font-weight: 600; line-height: 1.3; }
+      .scope-copy { display: block; margin-top: 2px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 9px; line-height: 1.35; overflow-wrap: anywhere; }
+      .selection {
+        margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--figma-color-border, #e5e5e5);
+        border-radius: 8px; background: var(--figma-color-bg-secondary, #f7f7f7);
+      }
+      .selection-row { display: flex; align-items: center; gap: 10px; }
+      .selection-mark {
+        position: relative; width: 28px; height: 28px; flex: none;
+        border: 1px solid var(--figma-color-border-strong, #b3b3b3); border-radius: 6px;
+      }
+      .selection-mark::before, .selection-mark::after {
+        content: ""; position: absolute; background: var(--figma-color-icon-brand, #0d99ff); border-radius: 99px;
+      }
+      .selection-mark::before { width: 12px; height: 2px; left: 7px; top: 8px; }
+      .selection-mark::after { width: 8px; height: 2px; left: 7px; top: 16px; }
+      .selection strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; margin-bottom: 2px; }
+      .section-label { margin: 0 0 8px; font-size: 11px; font-weight: 600; }
+      .presets { display: grid; gap: 7px; }
+      .preset {
+        position: relative; display: grid; grid-template-columns: 18px 1fr auto; gap: 9px; align-items: start;
+        padding: 10px; border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 8px;
+        background: var(--figma-color-bg, #fff); cursor: pointer;
+      }
+      .preset:hover { background: var(--figma-color-bg-hover, #f5f5f5); }
+      .preset:has(input:checked) {
+        border-color: var(--figma-color-border-selected, #0d99ff);
+        box-shadow: inset 0 0 0 1px var(--figma-color-border-selected, #0d99ff);
+        background: var(--figma-color-bg-selected-secondary, #edf7ff);
+      }
+      .preset input { margin: 2px 0 0; width: 14px; height: 14px; accent-color: var(--figma-color-bg-brand, #0d99ff); }
+      .preset-title { display: block; font-size: 12px; font-weight: 600; line-height: 1.35; }
+      .preset-copy { display: block; margin-top: 2px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 10.5px; line-height: 1.4; }
+      .recommended { color: var(--figma-color-text-brand, #007be5); font-size: 9.5px; font-weight: 600; }
+      details { margin-top: 9px; border-top: 1px solid var(--figma-color-border, #e5e5e5); }
+      summary { padding: 10px 1px 5px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 10.5px; cursor: pointer; }
+      .advanced { display: grid; gap: 7px; padding: 4px 1px 2px; }
+      .advanced label { display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: start; font-size: 11px; }
+      .advanced input { width: 14px; height: 14px; margin: 1px 0 0; accent-color: var(--figma-color-bg-brand, #0d99ff); }
+      .advanced small { display: block; margin-top: 1px; color: var(--figma-color-text-tertiary, #8a8a8a); font-size: 9.5px; line-height: 1.35; }
+      .actions { margin-top: 14px; }
+      .actions > button {
+        width: 100%; height: 40px; border: 0; border-radius: 6px;
+        background: var(--figma-color-bg-brand, #0d99ff); color: var(--figma-color-text-onbrand, #fff);
+        font-size: 12px; font-weight: 600; cursor: pointer;
+      }
+      .actions > button:hover:not(:disabled) { background: var(--figma-color-bg-brand-hover, #0c8ce9); }
+      .actions > button:disabled { opacity: .42; cursor: default; }
+      .export-overlay {
+        position: fixed; inset: 0; z-index: 20; display: none; place-items: center; padding: 20px;
+        background: color-mix(in srgb, var(--figma-color-bg, #fff) 78%, transparent);
+        backdrop-filter: blur(5px);
+      }
+      .export-overlay.visible { display: grid; }
+      .export-dialog {
+        width: min(100%, 340px); padding: 20px; border: 1px solid var(--figma-color-border, #e5e5e5);
+        border-radius: 13px; background: var(--figma-color-bg, #fff); box-shadow: 0 14px 40px #00000024;
+      }
+      .export-symbol {
+        display: grid; place-items: center; width: 38px; height: 38px; margin-bottom: 13px;
+        border-radius: 11px; color: var(--figma-color-icon-brand, #0d99ff);
+        background: var(--figma-color-bg-selected-secondary, #edf7ff);
+      }
+      .spinner { width: 17px; height: 17px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .75s linear infinite; }
+      .success-mark, .error-mark { display: none; width: 20px; height: 20px; }
+      .export-overlay.complete .spinner, .export-overlay.failed .spinner { display: none; }
+      .export-overlay.complete .success-mark, .export-overlay.failed .error-mark { display: block; }
+      .export-overlay.complete .export-symbol { color: var(--figma-color-icon-success, #0b7a3e); background: var(--figma-color-bg-success-tertiary, #e8f5ec); }
+      .export-overlay.failed .export-symbol { color: var(--figma-color-icon-danger, #f24822); background: var(--figma-color-bg-danger-tertiary, #fff0ed); }
+      .export-dialog strong { display: block; font-size: 14px; line-height: 1.4; }
+      .track { height: 4px; margin-top: 15px; overflow: hidden; border-radius: 99px; background: var(--figma-color-bg-tertiary, #ebebeb); }
+      .bar { width: 0; height: 100%; border-radius: inherit; background: var(--figma-color-bg-brand, #0d99ff); transition: width .16s ease; }
+      .status { min-height: 17px; margin-top: 9px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 10.5px; line-height: 1.45; }
+      .error { color: var(--figma-color-text-danger, #f24822); }
+      .download-info { display: none; margin-top: 14px; padding: 10px 11px; border-radius: 8px; background: var(--figma-color-bg-secondary, #f7f7f7); }
+      .export-overlay.complete .download-info { display: block; }
+      .download-filename { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; font-weight: 600; }
+      .download-hint { display: block; margin-top: 5px; color: var(--figma-color-text-secondary, #6b6b6b); font-size: 9.5px; line-height: 1.45; }
+      .dialog-actions { display: none; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+      .export-overlay.complete .dialog-actions, .export-overlay.failed .dialog-actions { display: grid; }
+      .dialog-button { height: 34px; border: 1px solid var(--figma-color-border, #e5e5e5); border-radius: 6px; background: var(--figma-color-bg, #fff); color: var(--figma-color-text, #1e1e1e); font-size: 10.5px; font-weight: 600; cursor: pointer; }
+      .dialog-button.primary { border-color: transparent; background: var(--figma-color-bg-brand, #0d99ff); color: var(--figma-color-text-onbrand, #fff); }
+      .export-overlay.failed #download-again { display: none; }
+      .export-overlay.failed .dialog-actions { grid-template-columns: 1fr; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div id="app" class="app" aria-busy="true">
+    <div class="header">
+      <div>
+        <h1>FrameParcel</h1>
+        <div id="tagline" class="subtle">Pack design, assets, and implementation context into one inspectable handoff.</div>
+      </div>
+      <div class="header-actions">
+        <div class="locale-switch" role="group" aria-label="Language">
+          <button type="button" class="locale-button" data-locale="zh" aria-pressed="false">中</button>
+          <button type="button" class="locale-button" data-locale="en" aria-pressed="false">EN</button>
+        </div>
+        <span id="local-only" class="privacy">LOCAL ONLY</span>
+      </div>
+    </div>
+
+    <div id="scope-label" class="section-label" style="margin-top:14px">Export scope</div>
+    <div class="scope-switch">
+      <label class="scope-option">
+        <input type="radio" name="scope" value="selection" checked />
+        <span><span id="scope-selection-title" class="scope-title">Current selection</span><span id="scope-selection-copy" class="scope-copy">One node or multiple selected frames, sections, and components.</span></span>
+      </label>
+      <label class="scope-option">
+        <input type="radio" name="scope" value="page" />
+        <span><span id="scope-page-title" class="scope-title">Current Page</span><span id="scope-page-copy" class="scope-copy">Export visible top-level content without wrapping it in another frame.</span></span>
+      </label>
+    </div>
+
+    <div class="selection">
+      <div class="selection-row">
+        <div class="selection-mark" aria-hidden="true"></div>
+        <div style="min-width:0">
+          <strong id="selection-name">Reading selection…</strong>
+          <div id="selection-meta" class="subtle"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="purpose-label" class="section-label">What will this package be used for?</div>
+    <div class="presets">
+      <label class="preset">
+        <input type="radio" name="preset" value="developer" checked />
+        <span><span id="developer-title" class="preset-title">Development or AI</span><span id="developer-copy" class="preset-copy">Previews, geometry, original images, smart SVGs, and a browsable index.html.</span></span>
+        <span id="recommended" class="recommended">RECOMMENDED</span>
+      </label>
+      <label class="preset">
+        <input type="radio" name="preset" value="review" />
+        <span><span id="review-title" class="preset-title">Visual review</span><span id="review-copy" class="preset-copy">Page and component previews plus a local browser. The smallest package.</span></span>
+        <span></span>
+      </label>
+      <label class="preset">
+        <input type="radio" name="preset" value="archive" />
+        <span><span id="archive-title" class="preset-title">Complete archive</span><span id="archive-copy" class="preset-copy">Adds Figma REST V1 data for debugging and long-term preservation.</span></span>
+        <span></span>
+      </label>
+    </div>
+
+    <details>
+      <summary id="custom-summary">Customize contents</summary>
+      <div class="advanced">
+        <label><input id="node-index" type="checkbox" checked /><span id="node-index-label">Implementation node index<small>Relative and absolute geometry, type, colors, effects, components, and variables.</small></span></label>
+        <label><input id="screenshots" type="checkbox" checked /><span id="screenshots-label">Screen and component 2× PNGs<small>Full surfaces go to screens; small top-level fragments go to components.</small></span></label>
+        <label><input id="images" type="checkbox" checked /><span id="images-label">Original bitmap assets<small>Preserves image-fill bytes instead of recropping preview screenshots.</small></span></label>
+        <label><input id="svg" type="checkbox" checked /><span id="svg-label">Smart SVG assets<small>Exports visible icon compositions while skipping hidden layers and duplicates.</small></span></label>
+        <label><input id="viewer" type="checkbox" checked /><span id="viewer-label">Local browser and handoff guide<small>Review the package without special tools and explain it to developers and agents.</small></span></label>
+        <label><input id="rest-json" type="checkbox" /><span id="rest-label">Figma REST V1 structure<small>Complete but usually redundant. Recommended only for full archives.</small></span></label>
+      </div>
+    </details>
+
+    <div class="actions">
+      <button id="export" disabled>Export handoff package</button>
+    </div>
+    </div>
+    <div id="export-overlay" class="export-overlay" role="dialog" aria-modal="true" aria-labelledby="export-dialog-title" aria-hidden="true">
+      <div class="export-dialog">
+        <div class="export-symbol" aria-hidden="true">
+          <div class="spinner"></div>
+          <svg class="success-mark" viewBox="0 0 20 20" fill="none"><path d="m4 10.5 3.5 3.5L16 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg class="error-mark" viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </div>
+        <strong id="export-dialog-title">Preparing export…</strong>
+        <div class="track"><div id="bar" class="bar"></div></div>
+        <div id="status" class="status" aria-live="polite"></div>
+        <div class="download-info">
+          <span id="download-filename" class="download-filename"></span>
+          <span id="download-hint" class="download-hint"></span>
+        </div>
+        <div class="dialog-actions">
+          <button id="download-again" type="button" class="dialog-button">Download again</button>
+          <button id="dialog-close" type="button" class="dialog-button primary">Done</button>
+        </div>
+      </div>
+    </div>
+    <script>/*__BUNDLED_UI__*/</script>
+  </body>
+</html>
