@@ -1,0 +1,18 @@
+{
+  "name": "frameparcel-figma",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Export local, browsable Figma handoff packages for developers and AI coding agents.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "tsc --noEmit",
+    "test:sandbox": "node scripts/sandbox-smoke.mjs",
+    "validate-export": "node scripts/validate-export.mjs"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "1.136.0",
+    "esbuild": "0.28.2",
+    "fflate": "0.8.3",
+    "typescript": "5.9.2"
+  }
+}

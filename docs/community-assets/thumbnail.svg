@@ -1,0 +1,61 @@
+<svg width="1920" height="1080" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1920" height="1080" fill="#F4F7FA"/>
+  <circle cx="1706" cy="144" r="310" fill="#DDF2FF"/>
+  <circle cx="122" cy="1070" r="330" fill="#EAE6FF"/>
+  <rect x="112" y="96" width="72" height="72" rx="16" fill="#0D99FF"/>
+  <path d="M132 124V116C132 113.791 133.791 112 136 112H144M160 112H168C170.209 112 172 113.791 172 116V124M172 140V148C172 150.209 170.209 152 168 152H160M144 152H136C133.791 152 132 150.209 132 148V140" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <path d="M140 127L152 120L164 127V141L152 148L140 141V127Z" fill="white"/>
+  <text x="206" y="148" fill="#16181B" font-family="Inter, Arial, sans-serif" font-size="46" font-weight="700">FrameParcel</text>
+  <text x="112" y="350" fill="#16181B" font-family="Inter, Arial, sans-serif" font-size="88" font-weight="750" letter-spacing="-3">Export once.</text>
+  <text x="112" y="452" fill="#16181B" font-family="Inter, Arial, sans-serif" font-size="88" font-weight="750" letter-spacing="-3">Hand off anywhere.</text>
+  <text x="116" y="530" fill="#5E6670" font-family="Inter, Arial, sans-serif" font-size="31">A local, browsable design package for developers and AI coding agents.</text>
+
+  <g transform="translate(112 672)">
+    <rect width="270" height="164" rx="22" fill="white" stroke="#D8DEE5" stroke-width="2"/>
+    <rect x="28" y="26" width="64" height="112" rx="12" fill="#151515"/>
+    <rect x="103" y="26" width="64" height="112" rx="12" fill="#252525"/>
+    <rect x="178" y="26" width="64" height="112" rx="12" fill="#151515"/>
+    <circle cx="60" cy="84" r="14" fill="#FFCD29"/>
+    <rect x="114" y="100" width="42" height="14" rx="7" fill="#FFCD29"/>
+    <rect x="190" y="50" width="40" height="7" rx="3.5" fill="#69717A"/>
+  </g>
+  <path d="M422 754H552" stroke="#8C96A1" stroke-width="4" stroke-linecap="round" stroke-dasharray="8 12"/>
+  <path d="M540 738L556 754L540 770" stroke="#8C96A1" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(586 646)">
+    <rect width="382" height="216" rx="26" fill="#0D99FF"/>
+    <path d="M78 82L191 24L304 82V164L191 220L78 164V82Z" fill="white" fill-opacity=".96" transform="translate(0 -14)"/>
+    <path d="M78 68L191 126L304 68M191 126V206" stroke="#0D99FF" stroke-width="8" stroke-linejoin="round"/>
+    <rect x="40" y="36" width="42" height="8" rx="4" fill="white"/>
+    <rect x="40" y="51" width="26" height="8" rx="4" fill="white" fill-opacity=".7"/>
+  </g>
+  <path d="M1002 754H1132" stroke="#8C96A1" stroke-width="4" stroke-linecap="round" stroke-dasharray="8 12"/>
+  <path d="M1120 738L1136 754L1120 770" stroke="#8C96A1" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(1168 592)">
+    <rect width="640" height="332" rx="30" fill="#16181B"/>
+    <rect x="34" y="34" width="572" height="58" rx="14" fill="#25292E"/>
+    <circle cx="62" cy="63" r="9" fill="#0D99FF"/>
+    <rect x="84" y="52" width="176" height="10" rx="5" fill="#F3F5F7"/>
+    <rect x="84" y="69" width="116" height="7" rx="3.5" fill="#707984"/>
+    <g transform="translate(34 118)">
+      <rect width="168" height="180" rx="16" fill="#25292E"/>
+      <rect x="52" y="20" width="64" height="112" rx="10" fill="#090A0B"/>
+      <rect x="22" y="148" width="90" height="8" rx="4" fill="#E9EDF1"/>
+      <rect x="22" y="164" width="62" height="6" rx="3" fill="#69717A"/>
+    </g>
+    <g transform="translate(218 118)">
+      <rect width="168" height="180" rx="16" fill="#25292E"/>
+      <rect x="52" y="20" width="64" height="112" rx="10" fill="#111315"/>
+      <rect x="22" y="148" width="104" height="8" rx="4" fill="#E9EDF1"/>
+      <rect x="22" y="164" width="72" height="6" rx="3" fill="#69717A"/>
+    </g>
+    <g transform="translate(402 118)">
+      <rect width="204" height="180" rx="16" fill="#25292E"/>
+      <path d="M62 66L102 44L142 66V112L102 136L62 112V66Z" fill="#0D99FF"/>
+      <rect x="24" y="148" width="118" height="8" rx="4" fill="#E9EDF1"/>
+      <rect x="24" y="164" width="82" height="6" rx="3" fill="#69717A"/>
+    </g>
+  </g>
+  <rect x="112" y="930" width="314" height="58" rx="29" fill="#E1E7ED"/>
+  <circle cx="145" cy="959" r="9" fill="#12A05C"/>
+  <text x="167" y="969" fill="#424951" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600">No network access</text>
+</svg>
