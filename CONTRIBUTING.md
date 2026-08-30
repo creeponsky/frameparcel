@@ -2,6 +2,8 @@
 
 Thanks for helping improve FrameParcel.
 
+Read [`AGENTS.md`](AGENTS.md) before changing the exporter. It is the canonical guide for product boundaries, authoritative files, runtime invariants, and release rules used by both human and AI-assisted contributors.
+
 ## Local checks
 
 Before opening a pull request, run:

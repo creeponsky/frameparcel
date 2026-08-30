@@ -105,6 +105,17 @@ npm audit --audit-level=high
 
 The sandbox smoke test deliberately omits `TextEncoder` and `TextDecoder`, matching the compatibility boundary that previously caused a real Figma runtime failure.
 
+## AI-assisted development
+
+This repository is intentionally structured for file-reading coding agents as well as human contributors:
+
+- [`AGENTS.md`](AGENTS.md) is the single canonical guide for product boundaries, authoritative files, invariants, checks, and release rules.
+- `CLAUDE.md`, `.cursor/rules/`, and `.github/copilot-instructions.md` are thin adapters that point to the same source instead of copying instructions that can drift.
+- [`docs/export-contract.md`](docs/export-contract.md) defines the ZIP as a tool-neutral interface rather than a prompt written for one model.
+- The generated `HANDOFF.md` tells an agent which visual, structural, and asset files are authoritative inside each export.
+
+Compatibility means that these agents can read the extracted folder; it does not imply an official integration or endorsement by their vendors.
+
 ## Known boundaries
 
 - Font names and styles are recorded, but licensed font files are never copied.
