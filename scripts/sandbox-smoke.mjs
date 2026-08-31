@@ -6,6 +6,7 @@ const messages = [];
 let pluginMessageHandler;
 let selectionChangeHandler;
 let storedLocale = "zh";
+let mainComponentReadCount = 0;
 
 const rootNode = {
   id: "1:1",
@@ -71,6 +72,35 @@ rootNode.children.push(
   makeChild("1:3", "Sticker component", 100, 100),
 );
 const sticker = rootNode.children[1];
+const mainComponent = { id: "2:1", name: "Primary button" };
+const makeInstance = (id, name, resolver) => ({
+  id,
+  name,
+  type: "INSTANCE",
+  width: 120,
+  height: 44,
+  x: 0,
+  y: 0,
+  visible: true,
+  parent: rootNode,
+  children: [],
+  get mainComponent() {
+    throw new Error("mainComponent is write-only with dynamic-page access");
+  },
+  async getMainComponentAsync() {
+    mainComponentReadCount += 1;
+    return resolver();
+  },
+  async exportAsync() {
+    return new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+  },
+});
+const linkedInstance = makeInstance("1:8", "Primary button instance", () => mainComponent);
+const missingInstance = makeInstance("1:9", "Detached instance", () => null);
+const unavailableInstance = makeInstance("1:10", "Unreadable instance", () => {
+  throw new Error("Component lookup failed");
+});
+rootNode.children.push(linkedInstance, missingInstance, unavailableInstance);
 const booleanIcon = {
   id: "1:6",
   name: "Boolean icon",
@@ -207,6 +237,22 @@ const singleManifest = singleMessages.find((message) => message.type === "export
 assert(singleManifest, "asset manifest was not written");
 const singleManifestJson = JSON.parse(Buffer.from(singleManifest.bytes).toString("utf8"));
 assert.deepEqual(singleManifestJson.svg.map((asset) => asset.nodeId), ["1:3"], "internal vector paths should not be exported separately");
+const singleNodeIndex = singleMessages.find((message) => message.type === "export-file" && message.path === "design/node-index.json");
+assert(singleNodeIndex, "node index was not written");
+const singleNodeIndexJson = JSON.parse(Buffer.from(singleNodeIndex.bytes).toString("utf8"));
+const linkedNode = singleNodeIndexJson.nodes.find((node) => node.id === linkedInstance.id);
+const missingNode = singleNodeIndexJson.nodes.find((node) => node.id === missingInstance.id);
+const unavailableNode = singleNodeIndexJson.nodes.find((node) => node.id === unavailableInstance.id);
+assert.deepEqual(linkedNode.mainComponent, mainComponent, "linked instances should resolve their main component asynchronously");
+assert.equal(linkedNode.mainComponentStatus, "resolved");
+assert.equal(missingNode.mainComponent, null);
+assert.equal(missingNode.mainComponentStatus, "missing");
+assert.equal(unavailableNode.mainComponent, null);
+assert.equal(unavailableNode.mainComponentStatus, "unavailable");
+assert.deepEqual(singleNodeIndexJson.instanceSummary, { total: 3, resolved: 1, missing: 1, unavailable: 1 });
+assert.equal(singleNodeIndexJson.warnings.length, 1);
+assert.equal(singleNodeIndexJson.warnings[0].nodeId, unavailableInstance.id);
+assert.equal(mainComponentReadCount, 3, "every instance should use getMainComponentAsync exactly once");
 
 assert(messages.some((message) => message.type === "export-complete"));
 assert(messages.some((message) => message.type === "export-file" && message.path === "design/node-index.json"));
@@ -216,12 +262,33 @@ assert(messages.some((message) => message.type === "export-file" && message.path
 assert(messages.some((message) => message.type === "export-file" && message.path === "index.html"));
 assert(messages.some((message) => message.type === "export-file" && message.path === "HANDOFF.md"));
 
+const beforeReviewExport = messages.length;
+const readsBeforeReviewExport = mainComponentReadCount;
+await pluginMessageHandler({
+  type: "export",
+  options: {
+    preset: "review",
+    locale: "en",
+    scope: "selection",
+    includeNodeIndex: false,
+    includeRestJson: false,
+    includeScreenshots: true,
+    includeImages: false,
+    includeSvg: false,
+    includeViewer: true,
+    screenshotScale: 2,
+  },
+});
+const reviewMessages = messages.slice(beforeReviewExport);
+assert(!reviewMessages.some((message) => message.type === "export-file" && message.path === "design/node-index.json"));
+assert.equal(mainComponentReadCount, readsBeforeReviewExport, "review exports should not resolve unused component metadata");
+
 currentPage.selection = [rootNode, secondRoot];
 selectionChangeHandler();
 const multiScopeMessage = messages.findLast((message) => message.type === "selection");
 assert.equal(multiScopeMessage.selection.rootCount, 2);
 assert.equal(multiScopeMessage.selection.screenCount, 2);
-assert.equal(multiScopeMessage.selection.componentCount, 1);
+assert.equal(multiScopeMessage.selection.componentCount, 4);
 
 const beforeMultiExport = messages.length;
 await pluginMessageHandler({
@@ -266,6 +333,6 @@ await pluginMessageHandler({
 assert(messages.some((message) => message.type === "export-complete" && message.filename === "Page-1-handoff.zip"));
 const pageComplete = messages.findLast((message) => message.type === "export-complete" && message.filename === "Page-1-handoff.zip");
 assert.equal(pageComplete.receipt.screens, 2);
-assert.equal(pageComplete.receipt.components, 1);
+assert.equal(pageComplete.receipt.components, 4);
 
 console.log("Figma sandbox smoke test passed without TextEncoder/TextDecoder globals.");

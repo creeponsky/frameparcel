@@ -1,6 +1,6 @@
 {
   "name": "frameparcel-figma",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Export local, browsable Figma handoff packages for developers and AI coding agents.",
   "scripts": {
@@ -9,6 +9,7 @@
     "assets:i18n": "node scripts/generate-community-assets.mjs",
     "assets:thumbnails": "node scripts/render-community-thumbnails.mjs",
     "test:sandbox": "node scripts/sandbox-smoke.mjs",
+    "test:validator": "node scripts/validate-export-smoke.mjs",
     "validate-export": "node scripts/validate-export.mjs"
   },
   "devDependencies": {

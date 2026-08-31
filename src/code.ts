@@ -25,6 +25,25 @@ type IndexedNode = Record<string, unknown> & {
   childIndex: number;
 };
 
+type NodeIndexWarning = {
+  code: "MAIN_COMPONENT_UNAVAILABLE";
+  nodeId: string;
+  nodeName: string;
+  nodePath: string;
+  message: string;
+};
+
+type NodeIndexResult = {
+  nodes: IndexedNode[];
+  warnings: NodeIndexWarning[];
+  instanceSummary: {
+    total: number;
+    resolved: number;
+    missing: number;
+    unavailable: number;
+  };
+};
+
 type AssetReference = {
   nodeId: string;
   nodeName: string;
@@ -60,7 +79,7 @@ type ExportScope = {
   roots: Array<SceneNode & ExportMixin>;
 };
 
-const EXPORTER_VERSION = "1.0.0";
+const EXPORTER_VERSION = "1.0.1";
 
 figma.showUI(__html__, {
   width: 420,
@@ -246,24 +265,66 @@ function walkScope(scope: ExportScope): WalkEntry[] {
   return output;
 }
 
-function buildNodeIndex(entries: WalkEntry[]): IndexedNode[] {
-  return entries.map(({ node, path, parentId, childIndex }) => {
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  transform: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const worker = async (): Promise<void> => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await transform(items[index]);
+    }
+  };
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+  await Promise.all(Array.from({ length: workerCount }, worker));
+  return results;
+}
+
+async function buildNodeIndex(entries: WalkEntry[]): Promise<NodeIndexResult> {
+  const results = await mapWithConcurrency(entries, 8, async ({ node, path, parentId, childIndex }) => {
     const indexed: IndexedNode = { id: node.id, name: node.name, type: node.type, path, parentId, childIndex };
+    let warning: NodeIndexWarning | null = null;
     for (const property of INDEX_PROPERTIES) {
       const value = readProperty(node, property);
       if (value !== undefined) indexed[property] = value;
     }
     if (node.type === "INSTANCE") {
       try {
-        indexed.mainComponent = node.mainComponent
-          ? { id: node.mainComponent.id, name: node.mainComponent.name }
-          : null;
-      } catch {
-        indexed.mainComponent = "__UNAVAILABLE__";
+        const component = await node.getMainComponentAsync();
+        indexed.mainComponent = component ? { id: component.id, name: component.name } : null;
+        indexed.mainComponentStatus = component ? "resolved" : "missing";
+      } catch (error) {
+        indexed.mainComponent = null;
+        indexed.mainComponentStatus = "unavailable";
+        warning = {
+          code: "MAIN_COMPONENT_UNAVAILABLE",
+          nodeId: node.id,
+          nodeName: node.name,
+          nodePath: path,
+          message: error instanceof Error ? error.message : String(error),
+        };
       }
     }
-    return indexed;
+    return { indexed, warning };
   });
+
+  const nodes = results.map((result) => result.indexed);
+  const warnings = results.flatMap((result) => result.warning ? [result.warning] : []);
+  const instances = nodes.filter((node) => node.type === "INSTANCE");
+  return {
+    nodes,
+    warnings,
+    instanceSummary: {
+      total: instances.length,
+      resolved: instances.filter((node) => node.mainComponentStatus === "resolved").length,
+      missing: instances.filter((node) => node.mainComponentStatus === "missing").length,
+      unavailable: instances.filter((node) => node.mainComponentStatus === "unavailable").length,
+    },
+  };
 }
 
 function paintsFrom(node: BaseNode, property: "fills" | "strokes"): readonly Paint[] {
@@ -498,7 +559,7 @@ async function exportPackage(scope: ExportScope, options: ExportOptions): Promis
     ? (canExportOverview ? 1 : 0) + surfaces.screens.length + surfaces.components.length
     : 0;
   const restSteps = options.includeRestJson ? scope.roots.length : 0;
-  const estimatedTotal = 2 + (options.includeNodeIndex ? 1 : 0) + restSteps + previewCount
+  const estimatedTotal = 1 + (options.includeNodeIndex ? 1 : 0) + restSteps + previewCount
     + (options.includeImages ? imageHashes.length : 0) + svgCandidates.length + (options.includeViewer ? 2 : 0);
   let completed = 0;
   const generatedAt = new Date().toISOString();
@@ -513,10 +574,9 @@ async function exportPackage(scope: ExportScope, options: ExportOptions): Promis
   const label = (zh: string, en: string): string => options.locale === "zh" ? zh : en;
 
   figma.ui.postMessage({ type: "export-start", total: estimatedTotal });
-  const index = buildNodeIndex(entries);
-  progress(label("已建立节点与素材索引", "Built the node and asset index"));
 
   if (options.includeNodeIndex) {
+    const index = await buildNodeIndex(entries);
     postJson("design/node-index.json", {
       exporterVersion: EXPORTER_VERSION,
       exportedAt: generatedAt,
@@ -529,9 +589,11 @@ async function exportPackage(scope: ExportScope, options: ExportOptions): Promis
         type: scope.nodeType,
         roots: scope.roots.map((root) => ({ id: root.id, name: root.name, type: root.type })),
       },
-      nodes: index,
+      nodes: index.nodes,
+      warnings: index.warnings,
+      instanceSummary: index.instanceSummary,
     });
-    progress(label("已写入开发坐标索引", "Wrote the implementation node index"));
+    progress(label("已解析并写入开发坐标索引", "Resolved and wrote the implementation node index"));
   }
 
   if (options.includeRestJson) {

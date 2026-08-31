@@ -86,6 +86,10 @@ https://github.com/creeponsky/frameparcel/issues
 
 https://github.com/creeponsky/frameparcel/blob/main/PRIVACY.md
 
+## Version 1.0.1 release notes
+
+FrameParcel now preserves Instance-to-Component relationships when Figma uses dynamic page loading. The node index also reports resolved, missing, and unavailable component references separately, and export validation catches unreadable relationships before a handoff reaches a coding agent.
+
 ## Version 1.0.0 release notes
 
 FrameParcel now exports a single selected node, multiple selected nodes, a multi-screen container, or the entire current Page. This release also includes Light and Dark Mode support, local visual browsing, original image and deduplicated SVG export, implementation geometry, clearer presets, and sandbox coverage for Figma's plugin runtime.

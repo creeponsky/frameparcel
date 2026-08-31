@@ -16,7 +16,7 @@ The standard development, visual review, and archive presets also include:
 
 - `screens/` — 2× previews of full-size screen surfaces and, when appropriate, a selected-container overview.
 - `components/` — previews of smaller top-level fragments that are useful for implementation but are not full screens.
-- `design/node-index.json` — implementation-focused node data including paths, parent IDs, geometry, typography, paints, effects, Auto Layout, components, and variable references.
+- `design/node-index.json` — implementation-focused node data including paths, parent IDs, geometry, typography, paints, effects, Auto Layout, components, and variable references. Instance nodes include a structured `mainComponent`, `mainComponentStatus`, and an export-level resolution summary and warning list.
 - `design/rest-v1.json` — raw Figma REST V1 output in the archive preset.
 - `assets/images/` — original bytes referenced by image fills.
 - `assets/svg/` — visible vector compositions, deduplicated by content.
@@ -36,6 +36,7 @@ Nodes that merely look nearby on the canvas are not included unless they are ins
 3. Reuse the exact files in `assets/`; do not redraw supplied artwork.
 4. Treat missing font files as an explicit boundary: names and styles are metadata, not redistribution permission.
 5. Read errors in `assets/manifest.json`. A package can exist while an individual original image or SVG candidate failed.
+6. When present, require `design/node-index.json.instanceSummary.unavailable` to be zero before relying on Instance-to-Component reuse. A `missing` component is distinct from a runtime read failure.
 
 ## Compatibility
 

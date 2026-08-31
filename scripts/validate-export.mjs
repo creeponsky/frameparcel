@@ -95,6 +95,21 @@ const images = names.filter((name) => name.startsWith("assets/images/") && !name
 const svg = names.filter((name) => name.startsWith("assets/svg/") && name.endsWith(".svg"));
 const nodesWithPosition = nodes.filter((node) => typeof node.x === "number" && typeof node.y === "number");
 const nodesWithAbsoluteBounds = nodes.filter((node) => node.absoluteBoundingBox && typeof node.absoluteBoundingBox === "object");
+const instanceNodes = nodes.filter((node) => node.type === "INSTANCE");
+const resolvedMainComponents = instanceNodes.filter((node) => (
+  node.mainComponentStatus === "resolved"
+  && node.mainComponent
+  && typeof node.mainComponent === "object"
+  && typeof node.mainComponent.id === "string"
+));
+const missingMainComponents = instanceNodes.filter((node) => (
+  node.mainComponentStatus === "missing" && node.mainComponent === null
+));
+const unavailableMainComponents = instanceNodes.filter((node) => (
+  node.mainComponent === "__UNAVAILABLE__"
+  || node.mainComponentStatus === "unavailable"
+  || !["resolved", "missing"].includes(node.mainComponentStatus)
+));
 const missingImages = (assets.images ?? []).filter((image) => image.error);
 const failedSvg = (assets.svg ?? []).filter((item) => item.error);
 
@@ -106,6 +121,10 @@ const report = {
   nodes: nodes.length,
   nodesWithPosition: nodesWithPosition.length,
   nodesWithAbsoluteBounds: nodesWithAbsoluteBounds.length,
+  instances: instanceNodes.length,
+  resolvedMainComponents: resolvedMainComponents.length,
+  missingMainComponents: missingMainComponents.length,
+  unavailableMainComponents: unavailableMainComponents.length,
   screenshots: screens.length,
   componentPreviews: components.length,
   rawImages: images.length,
@@ -133,6 +152,9 @@ if (["developer", "archive", "review"].includes(preset) && !has("HANDOFF.md")) e
 if (preset === "archive" && !has("design/rest-v1.json")) errors.push("archive preset is missing REST V1 JSON");
 if (missingImages.length > 0) errors.push(`${missingImages.length} original image(s) could not be read`);
 if (failedSvg.length > 0) errors.push(`${failedSvg.length} SVG candidate(s) failed to export`);
+if (unavailableMainComponents.length > 0) {
+  errors.push(`${unavailableMainComponents.length} instance main component reference(s) could not be resolved`);
+}
 
 if (errors.length > 0) {
   console.error(`Export validation failed: ${errors.join("; ")}`);
